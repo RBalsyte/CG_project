@@ -7,6 +7,9 @@ var floorSize = 20;
 var floorCount = 20;
 var movementSpeed = 3;
 
+var fenceHeight = 2;
+
+
 var gl = null;
 const camera = {
   position: {
@@ -149,10 +152,16 @@ function createSceneGraph(gl, resources) {
               fenceMaterial.shininess = 10.0;
 
       let fence = new ShaderSGNode(createProgram(gl, resources.vs_wall, resources.fs_wall), [fenceMaterial]);
-      root.append(new TransformationSGNode(glm.transform({ translate: [0,-1.52, floorSize], rotateX: 0, scale: 1}), [
+      root.append(new TransformationSGNode(glm.transform({ translate: [0,-1.52, floorSize], scale: 1}), [
         fence
       ]));
-      root.append(new TransformationSGNode(glm.transform({ translate: [0, -1.52, -floorSize], rotateX: 0, scale: 1}), [
+      root.append(new TransformationSGNode(glm.transform({ translate: [0, -1.52, -floorSize], scale: 1}), [
+        fence
+      ]));
+      root.append(new TransformationSGNode(glm.transform({ translate: [floorSize, -1.52, 0], rotateY: 90, scale: 1}), [
+        fence
+      ]));
+      root.append(new TransformationSGNode(glm.transform({ translate: [-floorSize, -1.52, 0], rotateY: -90, scale: 1}), [
         fence
       ]));
     }
@@ -267,7 +276,7 @@ function createSceneGraph(gl, resources) {
       }
 
       function makeFence(){
-        var fence = makeRect(floorSize, 1);
+        var fence = makeRect(floorSize, fenceHeight);
         fence.texture = [0, 0,  1, 0,  1, 1,  0, 1];
         return fence;
       }
@@ -315,11 +324,9 @@ function createSceneGraph(gl, resources) {
         //very primitive camera implementation
 
         let position = vec3.scale(
-          vec3.create(), vec3.fromValues(camera.position.x,camera.position.y,camera.position.z),
+          vec3.create(), vec3.fromValues(camera.position.x,camera.position.y,camera.position.z + camera.rotation),
           -1);
-        let lookAtMatrix = mat4.lookAt(mat4.create(), position, [0,0,0], [0,1,0]);
-        context.viewMatrix = lookAtMatrix;
-        //context.viewMatrix = mat4.multiply(mat4.create(), lookAtMatrix, mouseRotateMatrix);
+        context.viewMatrix = mat4.lookAt(mat4.create(), position, [0,0,0], [0,1,0]);
 
         //update animations
         //EXTRA TASK: animate texture coordinates
