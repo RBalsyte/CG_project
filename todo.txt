@@ -1,0 +1,11 @@
+# CG_project To Dos
+
+- Fix camera movement
+ - add Flight Mode to camera
+ - add Scene Mode to camera
+
+- Finish borders ( Sky, Fence + Multitexturing, Floor - make bigger ) 
+- Create house from different rectangles or obj 
+- Create spirit from Obj or multiple vertices
+- Create tree from multiple vertices 
+- Create rain with particle system
