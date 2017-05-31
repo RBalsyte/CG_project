@@ -5,9 +5,10 @@
 
 var floorSize = 20;
 var floorCount = 20;
-var movementSpeed = 3;
+var movementSpeed = 0.2;
 
 var gl = null;
+
 const camera = {
   position: {
     x:0,
@@ -33,6 +34,20 @@ var fenceTexture;
 var renderTargetFramebuffer;
 var framebufferWidth = 512;
 var framebufferHeight = 512;
+
+// Camera variables
+var cameraPos = vec3.fromValues(0,1,-10);
+var cameraLookAt = vec3.fromValues(0,0,0);
+var cameraDirection = vec3.normalize(vec3.create(),vec3.sub(vec3.create(),cameraPos, cameraLookAt));
+var upVector = vec3.fromValues(0,1,0);
+var cameraFront = vec3.fromValues(0,-1,10);
+
+var cameraRight = vec3.normalize(vec3.create(), vec3.cross(vec3.create(), upVector, cameraDirection));
+var cameraUp = vec3.cross(vec3.create(), cameraDirection, cameraRight);
+
+var pitch = 0;
+var yaw = -90;
+
 
 //load the required resources using a utility function
 loadResources({
@@ -314,12 +329,7 @@ function createSceneGraph(gl, resources) {
         context.projectionMatrix = mat4.perspective(mat4.create(), glm.deg2rad(30), gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
         //very primitive camera implementation
 
-        let position = vec3.scale(
-          vec3.create(), vec3.fromValues(camera.position.x,camera.position.y,camera.position.z),
-          -1);
-        let lookAtMatrix = mat4.lookAt(mat4.create(), position, [0,0,0], [0,1,0]);
-        context.viewMatrix = lookAtMatrix;
-        //context.viewMatrix = mat4.multiply(mat4.create(), lookAtMatrix, mouseRotateMatrix);
+
 
         //update animations
         //EXTRA TASK: animate texture coordinates
@@ -327,6 +337,13 @@ function createSceneGraph(gl, resources) {
 
         rotateNode.matrix = glm.rotateY(timeInMilliseconds*-0.01);
         rotateLight.matrix = glm.rotateY(timeInMilliseconds*0.05);
+
+        let position = vec3.scale(
+          vec3.create(), cameraPos,
+          -1);
+        let lookAtMatrix2 = mat4.lookAt(mat4.create(), cameraPos, vec3.add(vec3.create(),cameraPos, cameraFront), cameraUp);
+        let lookAtMatrix = mat4.lookAt(mat4.create(), position, [0,0,0], [0,1,0]);
+        context.viewMatrix = lookAtMatrix2;
 
         //render scenegraph
         root.render(context);
@@ -386,17 +403,34 @@ function createSceneGraph(gl, resources) {
             y: event.clientY - rect.top
           };
         }
+
         canvas.addEventListener('mousedown', function(event) {
           mouse.pos = toPos(event);
           mouse.leftButtonDown = event.button === 0;
         });
+
         canvas.addEventListener('mousemove', function(event) {
           const pos = toPos(event);
-          const delta = { x : mouse.pos.x - pos.x, y: mouse.pos.y - pos.y };
+          const delta = { x : mouse.pos.x - pos.x, y: pos.y - mouse.pos.y };
           if (mouse.leftButtonDown) {
             //add the relative movement of the mouse to the rotation variables
-            camera.position.x += delta.x;
-            camera.position.y += delta.y;
+             var sensitivity = 0.05;
+             delta.x = delta.x*sensitivity;
+             delta.y = delta.y*sensitivity;
+
+             yaw   += delta.x;
+             pitch += delta.y;
+
+             if(pitch > 89.0)
+                 pitch = 89.0;
+             if(pitch < -89.0)
+                 pitch = -89.0;
+
+             let front = vec3.create();
+             front[0] = Math.cos(glm.deg2rad(yaw)) * Math.cos(glm.deg2rad(pitch));
+             front[1] = Math.sin(glm.deg2rad(pitch));
+             front[2] = Math.sin(glm.deg2rad(yaw)) * Math.cos(glm.deg2rad(pitch));
+             cameraFront = vec3.normalize(vec3.create(), front);
           }
           mouse.pos = pos;
         });
@@ -412,22 +446,16 @@ function createSceneGraph(gl, resources) {
             camera.position.y = 0;
           }
           if (event.code == 'KeyW'){
-            camera.position.x += movementSpeed;
+             cameraPos = vec3.add(vec3.create(), cameraPos, vec3.multiply(vec3.create(),vec3.fromValues(movementSpeed,movementSpeed,movementSpeed),cameraFront));
           }
           if (event.code == 'KeyS'){
-            camera.position.x -= movementSpeed;
+            cameraPos = vec3.sub(vec3.create(), cameraPos, vec3.multiply(vec3.create(),vec3.fromValues(movementSpeed,movementSpeed,movementSpeed),cameraFront));
           }
           if (event.code == 'KeyD'){
-            camera.position.y += movementSpeed;
+            cameraPos = vec3.add(vec3.create(), cameraPos,vec3.multiply(vec3.create(), vec3.normalize(vec3.create(), vec3.cross(vec3.create(),cameraFront, cameraUp)), vec3.fromValues(movementSpeed,movementSpeed,movementSpeed)));
           }
           if (event.code == 'KeyA'){
-            camera.position.y -= movementSpeed;
-          }
-          if (event.code == 'KeyE'){
-            camera.rotation += movementSpeed;
-          }
-          if (event.code == 'KeyQ'){
-            camera.rotation -= movementSpeed;
+            cameraPos = vec3.sub(vec3.create(), cameraPos,vec3.multiply(vec3.create(), vec3.normalize(vec3.create(), vec3.cross(vec3.create(),cameraFront, cameraUp)), vec3.fromValues(movementSpeed,movementSpeed,movementSpeed)));;
           }
         });
       }
