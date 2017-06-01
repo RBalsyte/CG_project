@@ -45,8 +45,8 @@ var cameraFront = vec3.fromValues(0,-1,10);
 var cameraRight = vec3.normalize(vec3.create(), vec3.cross(vec3.create(), upVector, cameraDirection));
 var cameraUp = vec3.cross(vec3.create(), cameraDirection, cameraRight);
 
-var pitch = 0;
-var yaw = -90;
+var pitch = -1;
+var yaw = 90;
 
 
 //load the required resources using a utility function
