@@ -336,16 +336,6 @@ function createSceneGraph(gl, resources) {
         //setup context and camera matrices
         const context = createSGContext(gl);
         context.projectionMatrix = mat4.perspective(mat4.create(), glm.deg2rad(30), gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
-        //very primitive camera implementation
-
-<<<<<<< HEAD
-        let position = vec3.scale(
-          vec3.create(), vec3.fromValues(camera.position.x,camera.position.y,camera.position.z + camera.rotation),
-          -1);
-        context.viewMatrix = mat4.lookAt(mat4.create(), position, [0,0,0], [0,1,0]);
-=======
-
->>>>>>> DianasBranch
 
         //update animations
         //EXTRA TASK: animate texture coordinates
