@@ -246,7 +246,6 @@ function createSceneGraph(gl, resources) {
 
       let fence = new ShaderSGNode(createProgram(gl, resources.vs_wall, resources.fs_wall), [fenceMaterial]);
       root.append(new TransformationSGNode(glm.transform({ translate: [0,-1.52, floorSize], scale: 1}), [
-<<<<<<< HEAD
         fence
       ]));
       root.append(new TransformationSGNode(glm.transform({ translate: [0, -1.52, -floorSize], scale: 1}), [
@@ -258,19 +257,7 @@ function createSceneGraph(gl, resources) {
       root.append(new TransformationSGNode(glm.transform({ translate: [-floorSize, -1.52, 0], rotateY: -90, scale: 1}), [
         fence
       ]));
-=======
-         fence
-       ]));
-       root.append(new TransformationSGNode(glm.transform({ translate: [0, -1.52, -floorSize], scale: 1}), [
-         fence
-       ]));
-       root.append(new TransformationSGNode(glm.transform({ translate: [floorSize, -1.52, 0], rotateY: 90, scale: 1}), [
-         fence
-       ]));
-       root.append(new TransformationSGNode(glm.transform({ translate: [-floorSize, -1.52, 0], rotateY: -90, scale: 1}), [
-         fence
-       ]));
->>>>>>> DianasBranch
+
     }
 
     return root;
@@ -429,10 +416,6 @@ function createSceneGraph(gl, resources) {
         //setup context and camera matrices
         const context = createSGContext(gl);
         context.projectionMatrix = mat4.perspective(mat4.create(), glm.deg2rad(30), gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
-<<<<<<< HEAD
-=======
-        //very primitive camera implementation
->>>>>>> DianasBranch
 
         //update animations
         context.timeInMilliseconds = timeInMilliseconds;
@@ -441,9 +424,9 @@ function createSceneGraph(gl, resources) {
         rotateLight.matrix = glm.rotateY(timeInMilliseconds*0.05);
 
         moveSpiritHandNode.matrix = glm.rotateZ(Math.cos(timeInMilliseconds/2*0.01)*15);
-        //
-        // moveSpiritX=Math.abs((timeInMilliseconds*0.005)%(maxMoveSpiritX+0.0001) -maxMoveSpiritX/2) + maxMoveSpiritX/2;
-        // moveSpiritNode.matrix = glm.translate(moveSpiritX - 28, Math.abs(Math.cos(timeInMilliseconds/2*0.01))-0.4, -10);
+        
+        moveSpiritX=Math.abs((timeInMilliseconds*0.005)%(maxMoveSpiritX+0.0001) -maxMoveSpiritX/2) + maxMoveSpiritX/2;
+        moveSpiritNode.matrix = glm.translate(moveSpiritX - 28, Math.abs(Math.cos(timeInMilliseconds/2*0.01))-0.4, -10);
 
         let position = vec3.scale(
           vec3.create(), cameraPos,
