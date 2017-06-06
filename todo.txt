@@ -1,11 +1,16 @@
 # CG_project To Dos
 
 - Fix camera movement
- - add Flight Mode to camera
- - add Scene Mode to camera
+ - add Flight Mode to camera - Done
+ - add Scene Mode to camera - Create Scenes first
 
 - Finish borders ( Sky, Fence + Multitexturing, Floor - make bigger ) 
 - Create house from different rectangles or obj 
-- Create spirit from Obj or multiple vertices
+- Create spirit from Obj or multiple vertices 
+	- Spirit created, need to convert arms and legs to cylinders or cubes (having problems with the shaders)
+	- Animation of jumping created
+	- Animation of hands is almost done, need another Node for the other hand
+	- Change color or add texture
+
 - Create tree from multiple vertices 
 - Create rain with particle system
