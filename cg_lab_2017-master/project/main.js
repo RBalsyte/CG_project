@@ -5,7 +5,8 @@
 
 var floorSize = 20;
 var floorCount = 20;
-var movementSpeed = 0.2;
+var movementSpeed = 0.3;
+var animatedAngle = 0;
 
 var fenceHeight = 2;
 
@@ -24,8 +25,15 @@ const camera = {
 //scene graph nodes
 var root = null;
 var rootnofloor = null;
+var rotateSpirit;
 var rotateLight;
 var rotateNode;
+
+var maxMoveSpiritX = 32;
+var moveSpiritX = 0;
+var moveSpiritDown = true;
+var moveSpiritNode;
+var moveSpiritHandNode;
 
 //textures
 var renderTargetColorTexture;
@@ -60,6 +68,8 @@ loadResources({
   fs_single: 'shader/single.fs.glsl',
   vs_wall: 'shader/wallTexture.vs.glsl',
   fs_wall: 'shader/wallTexture.fs.glsl',
+  vs_spirit: 'shader/spirit.vs.glsl',
+  fs_spirit: 'shader/spirit.fs.glsl',
   floortexture: 'models/grass.jpg',
   fencetexture: 'models/fence.jpg',
   model: 'models/C-3PO.obj'
@@ -104,6 +114,74 @@ function createSceneGraph(gl, resources) {
     return new ShaderSGNode(createProgram(gl, resources.vs_wall, resources.fs_wall), [
       new RenderSGNode(makeRect(5,20))
     ]);
+  }
+
+  {
+    moveSpiritNode = new TransformationSGNode(mat4.create());
+    moveSpiritHandNode = new TransformationSGNode(mat4.create());
+
+    //var spiritTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.rotateY(animatedAngle/2));
+    var spiritTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.translate(10,-0.6, 0));
+    let spiritTransformationNode = new TransformationSGNode(spiritTransformationMatrix);
+    moveSpiritNode.append(spiritTransformationNode);
+
+    // add Body node as a sphere by creating a Sphere
+    let spiritBodyNode = new ShaderSGNode(createProgram(gl, resources.vs_spirit, resources.fs_spirit),
+      new RenderSGNode(makeSphere(.2,10,10)));
+    spiritTransformationNode.append(spiritBodyNode);
+
+    //transformation of left leg
+    var leftLegTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.translate(-0.1,-0.3,0));
+    leftLegTransformationMatrix = mat4.multiply(mat4.create(), leftLegTransformationMatrix, glm.scale(0.2,1,1));
+    var leftLegTransformationNode = new TransformationSGNode(leftLegTransformationMatrix);
+    //spiritTransformationNode.append(leftLegTransformationNode);
+
+    //left leg
+    let leftLegNode = new ShaderSGNode(createProgram(gl, resources.vs_spirit, resources.fs_spirit),
+      new RenderSGNode(makeRect(0.05,0.3)));
+    leftLegTransformationNode.append(leftLegNode);
+    spiritTransformationNode.append(leftLegTransformationNode);
+
+    //transformation of right leg
+    var rightLegTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.translate(0.13,-0.3,0));
+    rightLegTransformationMatrix = mat4.multiply(mat4.create(), rightLegTransformationMatrix, glm.scale(0.2,1,1));
+    var rightLegTransformationNode = new TransformationSGNode(rightLegTransformationMatrix);
+    //spiritTransformationNode.append(rightLegTransformationNode);
+
+    //right Leg
+    let rightLegNode = new ShaderSGNode(createProgram(gl, resources.vs_spirit, resources.fs_spirit),
+      new RenderSGNode(makeRect(0.05,0.3)));
+    rightLegTransformationNode.append(rightLegNode);
+    spiritTransformationNode.append(rightLegTransformationNode);
+
+    spiritTransformationNode.append(moveSpiritHandNode);
+    // transformation of left upper arm
+    var leftUpperArmTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.rotateY(glm.deg2rad(120)));
+    leftUpperArmTransformationMatrix = mat4.multiply(mat4.create(),leftUpperArmTransformationMatrix , glm.translate(-0.16,-0.2,0));
+    leftUpperArmTransformationMatrix = mat4.multiply(mat4.create(), leftUpperArmTransformationMatrix, glm.scale(0.2,1,1));
+    var leftUpperArmTransformationNode = new TransformationSGNode(leftUpperArmTransformationMatrix);
+
+    // left upper arm
+    let leftUpperArmNode = new ShaderSGNode(createProgram(gl, resources.vs_spirit, resources.fs_spirit),
+      new RenderSGNode(makeRect(0.05,0.2)));
+    leftUpperArmTransformationNode.append(leftUpperArmNode);
+    moveSpiritHandNode.append(leftUpperArmTransformationNode);
+
+    // transformation of right upper arm
+    var rightUpperArmTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.rotateY(glm.deg2rad(45)));
+    rightUpperArmTransformationMatrix = mat4.multiply(mat4.create(),rightUpperArmTransformationMatrix , glm.translate(0.18,-0.2,0));
+    rightUpperArmTransformationMatrix = mat4.multiply(mat4.create(), rightUpperArmTransformationMatrix, glm.scale(0.2,1,1));
+    var rightUpperArmTransformationNode = new TransformationSGNode(rightUpperArmTransformationMatrix);
+
+    // right upper arm
+    let rightUpperArmNode = new ShaderSGNode(createProgram(gl, resources.vs_spirit, resources.fs_spirit),
+      new RenderSGNode(makeRect(0.05,0.2)));
+    rightUpperArmTransformationNode.append(rightUpperArmNode);
+    moveSpiritHandNode.append(rightUpperArmTransformationNode);
+    // transformation of right lower arm
+
+    spiritTransformationNode.append(moveSpiritHandNode);
+    root.append(moveSpiritNode);
   }
 
   {
@@ -168,6 +246,7 @@ function createSceneGraph(gl, resources) {
 
       let fence = new ShaderSGNode(createProgram(gl, resources.vs_wall, resources.fs_wall), [fenceMaterial]);
       root.append(new TransformationSGNode(glm.transform({ translate: [0,-1.52, floorSize], scale: 1}), [
+<<<<<<< HEAD
         fence
       ]));
       root.append(new TransformationSGNode(glm.transform({ translate: [0, -1.52, -floorSize], scale: 1}), [
@@ -179,10 +258,24 @@ function createSceneGraph(gl, resources) {
       root.append(new TransformationSGNode(glm.transform({ translate: [-floorSize, -1.52, 0], rotateY: -90, scale: 1}), [
         fence
       ]));
+=======
+         fence
+       ]));
+       root.append(new TransformationSGNode(glm.transform({ translate: [0, -1.52, -floorSize], scale: 1}), [
+         fence
+       ]));
+       root.append(new TransformationSGNode(glm.transform({ translate: [floorSize, -1.52, 0], rotateY: 90, scale: 1}), [
+         fence
+       ]));
+       root.append(new TransformationSGNode(glm.transform({ translate: [-floorSize, -1.52, 0], rotateY: -90, scale: 1}), [
+         fence
+       ]));
+>>>>>>> DianasBranch
     }
 
     return root;
   }
+
 
   function initTextures(resources)
   {
@@ -336,13 +429,21 @@ function createSceneGraph(gl, resources) {
         //setup context and camera matrices
         const context = createSGContext(gl);
         context.projectionMatrix = mat4.perspective(mat4.create(), glm.deg2rad(30), gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
+<<<<<<< HEAD
+=======
+        //very primitive camera implementation
+>>>>>>> DianasBranch
 
         //update animations
-        //EXTRA TASK: animate texture coordinates
         context.timeInMilliseconds = timeInMilliseconds;
 
         rotateNode.matrix = glm.rotateY(timeInMilliseconds*-0.01);
         rotateLight.matrix = glm.rotateY(timeInMilliseconds*0.05);
+
+        moveSpiritHandNode.matrix = glm.rotateZ(Math.cos(timeInMilliseconds/2*0.01)*15);
+        //
+        // moveSpiritX=Math.abs((timeInMilliseconds*0.005)%(maxMoveSpiritX+0.0001) -maxMoveSpiritX/2) + maxMoveSpiritX/2;
+        // moveSpiritNode.matrix = glm.translate(moveSpiritX - 28, Math.abs(Math.cos(timeInMilliseconds/2*0.01))-0.4, -10);
 
         let position = vec3.scale(
           vec3.create(), cameraPos,
@@ -356,6 +457,8 @@ function createSceneGraph(gl, resources) {
 
         //animate
         requestAnimationFrame(render);
+
+          animatedAngle = timeInMilliseconds/10;
       }
 
       //a scene graph node for setting texture parameters
@@ -464,4 +567,33 @@ function createSceneGraph(gl, resources) {
             cameraPos = vec3.sub(vec3.create(), cameraPos,vec3.multiply(vec3.create(), vec3.normalize(vec3.create(), vec3.cross(vec3.create(),cameraFront, cameraUp)), vec3.fromValues(movementSpeed,movementSpeed,movementSpeed)));;
           }
         });
+      }
+
+      class CubeRenderNode extends SGNode {
+
+        render(context) {
+
+          //setting the model view and projection matrix on shader
+          //setUpModelViewMatrix(context.sceneMatrix, context.viewMatrix);
+
+          var positionLocation = gl.getAttribLocation(context.shader, 'a_position');
+          gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexBuffer);
+          gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false,0,0) ;
+          gl.enableVertexAttribArray(positionLocation);
+
+          var colorLocation = gl.getAttribLocation(context.shader, 'a_color');
+          gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
+          gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false,0,0) ;
+          gl.enableVertexAttribArray(colorLocation);
+
+          //set alpha value for blending
+          //TASK 1-3
+          gl.uniform1f(gl.getUniformLocation(context.shader, 'u_alpha'), 0.5);
+
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndexBuffer);
+          gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0); //LINE_STRIP
+
+          //render children
+          super.render(context);
+        }
       }
