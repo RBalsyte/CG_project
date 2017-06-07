@@ -25,11 +25,14 @@ var moveSpiritDown = true;
 
 //scene graph nodes
 var root = null;
-var rootnofloor = null;
 var camera;
 var rotateSpirit;
 var rotateLight;
-var rotateNode;
+var moveSpiritNode;
+var moveSpiritHandNode;
+
+var moveSpiritX = 0;
+var moveSpiritDown = true;
 var moveSpiritNode;
 var moveSpiritHandNode;
 
@@ -69,9 +72,6 @@ function init(resources) {
   
   gl.enable(gl.DEPTH_TEST);
   root = createSceneGraph(gl, resources);
-  //create scenegraph without floor and simple shader
-  rootnofloor = new ShaderSGNode(createProgram(gl, resources.vs_single, resources.fs_single));
-  rootnofloor.append(rotateNode); //reuse model part
 }
 
 function createSceneGraph(gl, resources) {
@@ -127,7 +127,8 @@ function createSceneGraph(gl, resources) {
   }
   
   {
-    let light = new LightSGNode();
+    //initialize light
+    let light = new LightSGNode(); //use now framework implementation of light node
     light.ambient = [0.2, 0.2, 0.2, 1];
     light.diffuse = [0.8, 0.8, 0.8, 1];
     light.specular = [1, 1, 1, 1];
@@ -276,9 +277,6 @@ function renderToTexture(timeInMilliseconds){
   const context = createSGContext(gl);
   mat4.lookAt(context.viewMatrix, [0,1,-10], [0,0,0], [0,1,0]);
   context.timeInMilliseconds = timeInMilliseconds;
-  
-  rootnofloor.render(context);
-  
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
@@ -294,7 +292,6 @@ function render(timeInMilliseconds) {
   context.timeInMilliseconds = timeInMilliseconds;
   
   camera.move(timeInMilliseconds);
-  rotateNode.matrix = glm.rotateY(timeInMilliseconds * -0.01);
   rotateLight.matrix = glm.rotateY(timeInMilliseconds * 0.05);
   moveSpiritX=Math.abs((timeInMilliseconds*0.005)%(maxMoveSpiritX+0.0001) -maxMoveSpiritX/2) + maxMoveSpiritX/2;
   moveSpiritNode.matrix = glm.translate(moveSpiritX - 28, Math.abs(Math.cos(timeInMilliseconds/2*0.01))-0.4, -10);
@@ -323,6 +320,7 @@ class TextureSGNode extends SGNode {
     gl.uniform1i(gl.getUniformLocation(context.shader, 'u_tex'), this.textureunit);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    
     gl.uniform1i(gl.getUniformLocation(context.shader, 'u_tex2'), this.textureunit2);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.texture2);
@@ -335,7 +333,6 @@ class TextureSGNode extends SGNode {
     gl.bindTexture(gl.TEXTURE_2D, null);
     
     gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableObjectTexture'), 0);
-    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableMultitexturing'), 0);
   }
 }
 
