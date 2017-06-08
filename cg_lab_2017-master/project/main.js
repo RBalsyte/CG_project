@@ -5,13 +5,15 @@
 
 const floorSize = 20;
 const floorCount = 20;
-const fenceHeight = 3;
+const fenceHeight = 1;
 const fenceCount = 10;
 
 const movementSpeed = 0.005;
 const mouseSpeed = 0.00002;
 
 const maxMoveSpiritX = 32;
+
+const floorOffset = -2;
 
 var gl = null;
 
@@ -30,6 +32,7 @@ var rotateSpirit;
 var rotateLight;
 var moveSpiritNode;
 var moveSpiritHandNode;
+var noFaceNode;
 
 var moveSpiritX = 0;
 var moveSpiritDown = true;
@@ -56,7 +59,8 @@ loadResources({
   fs_spirit: 'shader/spirit.fs.glsl',
   floortexture: 'models/grass.jpg',
   fencetexture: 'models/fence.jpg',
-  oldtexture: 'models/paint.jpg'
+  oldtexture: 'models/paint.jpg',
+  model: 'models/noFace.obj'
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
   render(0);
@@ -109,7 +113,7 @@ function createSceneGraph(gl, resources) {
     floor.specular = [1, 1, 1, 1];
     floor.shininess = 10;
     
-    root.append(new TransformationSGNode(glm.transform({ translate: [0,-1.52,0], rotateX: -90, scale: 1}), [floor]));
+    root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset, 0], rotateX: -90, scale: 1}), [floor]));
   }
   
   {
@@ -120,10 +124,10 @@ function createSceneGraph(gl, resources) {
     fence.emission = [0, 0, 0, 1];
     fence.shininess = 0.0;
     
-    root.append(new TransformationSGNode(glm.transform({ translate: [0,-1.52, floorSize], scale: 1}), [fence]));
-    root.append(new TransformationSGNode(glm.transform({ translate: [0, -1.52, -floorSize], scale: 1}), [fence]));
-    root.append(new TransformationSGNode(glm.transform({ translate: [floorSize, -1.52, 0], rotateY: 90, scale: 1}), [fence]));
-    root.append(new TransformationSGNode(glm.transform({ translate: [-floorSize, -1.52, 0], rotateY: -90, scale: 1}), [fence]));
+    root.append(new TransformationSGNode(glm.transform({ translate: [0, fenceHeight + floorOffset, floorSize], scale: 1}), [fence]));
+    root.append(new TransformationSGNode(glm.transform({ translate: [0, fenceHeight + floorOffset, -floorSize], scale: 1}), [fence]));
+    root.append(new TransformationSGNode(glm.transform({ translate: [floorSize, fenceHeight + floorOffset, 0], rotateY: 90, scale: 1}), [fence]));
+    root.append(new TransformationSGNode(glm.transform({ translate: [-floorSize, fenceHeight + floorOffset, 0], rotateY: -90, scale: 1}), [fence]));
   }
   
   {
@@ -148,7 +152,7 @@ function createSceneGraph(gl, resources) {
     moveSpiritHandNode = new TransformationSGNode(mat4.create());
     
     //var spiritTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.rotateY(animatedAngle/2));
-    var spiritTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.translate(10,-0.6, 0));
+    var spiritTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.translate(10, floorOffset + 0.6, 0));
     let spiritTransformationNode = new TransformationSGNode(spiritTransformationMatrix);
     moveSpiritNode.append(spiritTransformationNode);
     
@@ -209,6 +213,21 @@ function createSceneGraph(gl, resources) {
     
     spiritTransformationNode.append(moveSpiritHandNode);
     root.append(moveSpiritNode);
+  }
+  
+  {
+    //initialize No Face
+    noFaceNode = new MaterialSGNode([ //use now framework implementation of material node
+      new RenderSGNode(resources.model)
+    ]);
+    //gold
+    noFaceNode.ambient = [0, 0, 0, 1];
+    noFaceNode.diffuse = [0.1, 0.1, 0.1, 1];
+    noFaceNode.specular = [0, 0, 0, 1];
+    noFaceNode.emission = [0, 0, 0, 1];
+    noFaceNode.shininess = 0.0;
+    
+    root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset, 0], scale: [0.4,1,0.4]}), [noFaceNode]));
   }
   
   return root;
@@ -294,7 +313,7 @@ function render(timeInMilliseconds) {
   camera.move(timeInMilliseconds);
   rotateLight.matrix = glm.rotateY(timeInMilliseconds * 0.05);
   moveSpiritX=Math.abs((timeInMilliseconds*0.005)%(maxMoveSpiritX+0.0001) -maxMoveSpiritX/2) + maxMoveSpiritX/2;
-  moveSpiritNode.matrix = glm.translate(moveSpiritX - 28, Math.abs(Math.cos(timeInMilliseconds/2*0.01))-0.4, -10);
+  moveSpiritNode.matrix = glm.translate(moveSpiritX - 28, Math.abs(Math.cos(timeInMilliseconds/2*0.01)), -10);
   
   mat4.perspective(context.projectionMatrix, glm.deg2rad(30), width / height, 0.01, 100);
   mat4.lookAt(context.viewMatrix, camera.position, camera.look, camera.up);

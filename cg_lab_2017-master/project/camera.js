@@ -87,6 +87,6 @@ Camera.prototype.reset = function () {
   this.look = vec3.create(0, 0, 0);
   this.up = vec3.create();
   
-  this.horizontalAngle = 3.14;
+  this.horizontalAngle = Math.PI;
   this.verticalAngle = 0;
 }
