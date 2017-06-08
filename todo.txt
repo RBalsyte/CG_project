@@ -1,7 +1,7 @@
 # CG_project To Dos
 
 - Fix camera movement
- - add Flight Mode to camera - Done
+ - add Flight Mode to camera - Done Done
  - add Scene Mode to camera - Create Scenes first
 
 - Finish borders ( Sky, Fence + Multitexturing, Floor - make bigger ) 
@@ -14,3 +14,8 @@
 
 - Create tree from multiple vertices 
 - Create rain with particle system
+
+- Create Light 
+	- fixed one (Sun)
+	- Moving light in the house
+	- Light Pole outside the house
