@@ -152,7 +152,8 @@ function createSceneGraph(gl, resources) {
 
   function makeRaindrop(){
     return new ShaderSGNode(createProgram(gl, resources.vs_particle, resources.fs_particle), [
-      new RenderSGNode(makeRect(0.02, 0.03))
+      new ParticleSGNode(vec3.create())
+      //new RenderSGNode(makeRect(0.02, 0.03))
     ]);
   }
 
@@ -658,8 +659,8 @@ function createCylinder(segments, length, radius) {
 
 class ParticleSGNode extends SGNode {
 
-  constructor(position) {
-    super();
+  constructor(position, children) {
+    super(children);
     this.position = position || vec3.create(); //vec3
   }
 
