@@ -36,8 +36,6 @@ var noFaceNode;
 
 var moveSpiritX = 0;
 var moveSpiritDown = true;
-var moveSpiritNode;
-var moveSpiritHandNode;
 
 //textures
 var renderTargetColorTexture;
@@ -83,7 +81,9 @@ function init(resources) {
   initRenderToTexture();
   
   gl.enable(gl.DEPTH_TEST);
+  
   root = createSceneGraph(gl, resources);
+  camera = new Camera(root, gl.canvas, movementSpeed, mouseSpeed);
 }
 
 function initTextures(resources){
@@ -117,33 +117,55 @@ function initTexture(texture, image){
   gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
+function initRenderToTexture() {
+  
+  var depthTextureExt = gl.getExtension("WEBGL_depth_texture");
+  if(!depthTextureExt) { alert('No depth texture support!!!'); return; }
+  gl.activeTexture(gl.TEXTURE0);
+  renderTargetFramebuffer = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, renderTargetFramebuffer);
+  renderTargetColorTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, renderTargetColorTexture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  
+  renderTargetDepthTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, renderTargetDepthTexture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, width, height, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_SHORT, null);
+  
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, renderTargetColorTexture, 0);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, renderTargetDepthTexture, 0);
+  
+  if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!=gl.FRAMEBUFFER_COMPLETE)
+  {alert('Framebuffer incomplete!');}
+  
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+
 function createSceneGraph(gl, resources) {
   //create scenegraph
   const root = new ShaderSGNode(createProgram(gl, resources.vs_texture, resources.fs_texture));
   
   //light debug helper function
   function createLightSphere() {
-    return new ShaderSGNode(createProgram(gl, resources.vs_single, resources.fs_single), [
-      new RenderSGNode(makeSphere(.2,10,10))
-    ]);
+    return new ShaderSGNode(createProgram(gl, resources.vs_single, resources.fs_single), [new RenderSGNode(makeSphere(.2,10,10))]);
   }
   
-  function makeFloor(width, height, textureRepeatCount) {
-    var floor = makeRect(width, height);
+  function makeRectangle(width, height, textureRepeatCountHorizontally, textureRepeatCountVertically) {
+    var rectangle = makeRect(width, height);
     //adapt texture coordinates
-    floor.texture = [0, 0, textureRepeatCount, 0, textureRepeatCount, textureRepeatCount, 0, textureRepeatCount];
-    return floor;
+    rectangle.texture = [0, 0, textureRepeatCountHorizontally, 0, textureRepeatCountHorizontally, textureRepeatCountVertically, 0, textureRepeatCountVertically];
+    return rectangle;
   }
   
-  function makeFence(){
-    var fence = makeRect(floorSize, fenceHeight);
-    fence.texture = [0, 0, fenceCount, 0, fenceCount, 1, 0, 1];
-    return fence;
-  }
-  
-  {
-    camera = new Camera(root, gl.canvas, movementSpeed, mouseSpeed);
-  }
   {
     //initialize light
     let light = new LightSGNode(); //use now framework implementation of light node
@@ -158,18 +180,18 @@ function createSceneGraph(gl, resources) {
     rotateLight.append(createLightSphere());
     root.append(rotateLight);
   }
+  
   {
-    let floor = new MaterialSGNode(new TextureSGNode(floorTexture, 0, new RenderSGNode(makeFloor(floorSize, floorSize, floorCount))));
+    let floor = new MaterialSGNode(new TextureSGNode(floorTexture, 0, new RenderSGNode(makeRectangle(floorSize, floorSize, floorCount, floorCount))));
     floor.ambient = [0, 0, 0, 1];
     floor.diffuse = [0.1, 0.1, 0.1, 1];
     floor.specular = [1, 1, 1, 1];
     floor.shininess = 10;
-    
     root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset, 0], rotateX: -90, scale: 1}), [floor]));
   }
   
   {
-    let fence = new MaterialSGNode(new TextureSGNode(fenceTexture, 0, new RenderSGNode(makeFence()), oldTexture, 1));
+    let fence = new MaterialSGNode(new TextureSGNode(fenceTexture, 0, new RenderSGNode(makeRectangle(floorSize, fenceHeight, fenceCount, 1)), oldTexture, 1));
     fence.ambient = [0.9, 0.9, 0.9, 1];
     fence.diffuse = [0.8, 0.8, 0.8, 1];
     fence.specular = [0, 0, 0, 1];
@@ -193,7 +215,6 @@ function createSceneGraph(gl, resources) {
   }
   
   {
-    //initialize No Face
     let houseRoof = new MaterialSGNode([new RenderSGNode(resources.houseroof)]);
     houseRoof.ambient = [0.3, 0.3, 0.2, 1];
     houseRoof.diffuse = [0.1, 0.1, 0.1, 1];
@@ -204,13 +225,11 @@ function createSceneGraph(gl, resources) {
   }
   
   {
-    //initialize No Face
-    let houseFloor = new MaterialSGNode(new TextureSGNode(houseFloorTexture, 0, new RenderSGNode(makeFloor(15, 10, 20))));
+    let houseFloor = new MaterialSGNode(new TextureSGNode(houseFloorTexture, 0, new RenderSGNode(makeRectangle(15, 10, 20, 20))));
     houseFloor.ambient = [0, 0, 0, 1];
     houseFloor.diffuse = [0.1, 0.1, 0.1, 1];
     houseFloor.specular = [1, 1, 1, 1];
     houseFloor.shininess = 10;
-    
     root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset + 0.05, 0], rotateX: -90, scale: 1}), [houseFloor]));
   }
   
@@ -219,7 +238,7 @@ function createSceneGraph(gl, resources) {
     moveSpiritHandNode = new TransformationSGNode(mat4.create());
     
     //var spiritTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.rotateY(animatedAngle/2));
-    var spiritTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.translate(10, floorOffset + 0.6, 0));
+    var spiritTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.translate(30, floorOffset + 0.6, 0));
     let spiritTransformationNode = new TransformationSGNode(spiritTransformationMatrix);
     moveSpiritNode.append(spiritTransformationNode);
     
@@ -283,66 +302,16 @@ function createSceneGraph(gl, resources) {
   }
   
   {
-    //initialize No Face
-    noFaceNode = new MaterialSGNode([ //use now framework implementation of material node
-      new RenderSGNode(resources.noface)
-    ]);
-    //gold
+    noFaceNode = new MaterialSGNode([new RenderSGNode(resources.noface)]);
     noFaceNode.ambient = [0, 0, 0, 1];
     noFaceNode.diffuse = [0.1, 0.1, 0.1, 1];
     noFaceNode.specular = [0, 0, 0, 1];
     noFaceNode.emission = [0, 0, 0, 1];
     noFaceNode.shininess = 0.0;
-    
     root.append(new TransformationSGNode(glm.translate(0, floorOffset + 2, 0), [noFaceNode]));
   }
   
   return root;
-}
-
-
-function initRenderToTexture() {
-  
-  var depthTextureExt = gl.getExtension("WEBGL_depth_texture");
-  if(!depthTextureExt) { alert('No depth texture support!!!'); return; }
-  gl.activeTexture(gl.TEXTURE0);
-  renderTargetFramebuffer = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, renderTargetFramebuffer);
-  renderTargetColorTexture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, renderTargetColorTexture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-  
-  renderTargetDepthTexture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, renderTargetDepthTexture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, width, height, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_SHORT, null);
-  
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, renderTargetColorTexture, 0);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, renderTargetDepthTexture, 0);
-  
-  if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!=gl.FRAMEBUFFER_COMPLETE)
-  {alert('Framebuffer incomplete!');}
-  
-  gl.bindTexture(gl.TEXTURE_2D, null);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-}
-
-function renderToTexture(timeInMilliseconds){
-  gl.bindFramebuffer(gl.FRAMEBUFFER, renderTargetFramebuffer);
-  gl.viewport(0, 0, width, height);
-  gl.clearColor(0.9, 0.9, 0.9, 1.0);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  const context = createSGContext(gl);
-  mat4.lookAt(context.viewMatrix, [0,1,-10], [0,0,0], [0,1,0]);
-  context.timeInMilliseconds = timeInMilliseconds;
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
 function render(timeInMilliseconds) {
@@ -368,6 +337,17 @@ function render(timeInMilliseconds) {
   root.render(context);
   requestAnimationFrame(render);
   animatedAngle = timeInMilliseconds/10;
+}
+
+function renderToTexture(timeInMilliseconds){
+  gl.bindFramebuffer(gl.FRAMEBUFFER, renderTargetFramebuffer);
+  gl.viewport(0, 0, width, height);
+  gl.clearColor(0.9, 0.9, 0.9, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  const context = createSGContext(gl);
+  mat4.lookAt(context.viewMatrix, [0,1,-10], [0,0,0], [0,1,0]);
+  context.timeInMilliseconds = timeInMilliseconds;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
 //a scene graph node for setting texture parameters
