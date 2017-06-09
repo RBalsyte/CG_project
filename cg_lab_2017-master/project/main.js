@@ -41,6 +41,9 @@ var floorTexture;
 var fenceTexture;
 var concreteTexture;
 var oldTexture;
+var houseFloorTexture;
+var houseWallTexture;
+var mossTexture;
 
 //framebuffer variables
 var renderTargetFramebuffer;
@@ -58,7 +61,12 @@ loadResources({
   concretetexture: 'models/concrete.jpg',
   tree_model_01: 'models/tree01.obj',
   oldtexture: 'models/paint.jpg',
-  model: 'models/noFace.obj'
+  housefloortexture: 'models/tatami.jpg',
+  housewalltexture: 'models/houseWall.jpg',
+  mosstexture: 'models/moss.jpg',
+  housebody: 'models/houseBody.obj',
+  houseroof: 'models/houseRoof.obj',
+  noface: 'models/noFace.obj'
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
   render(0);
@@ -228,7 +236,7 @@ function createSceneGraph(gl, resources) {
   {
     //initialize No Face
     noFaceNode = new MaterialSGNode([ //use now framework implementation of material node
-      new RenderSGNode(resources.model)
+      new RenderSGNode(resources.noface)
     ]);
     //gold
     noFaceNode.ambient = [0, 0, 0, 1];
@@ -273,15 +281,17 @@ function initTextures(resources){
   oldTexture = gl.createTexture();
   initTexture(oldTexture, resources.oldtexture);
 
+  houseFloorTexture = gl.createTexture();
+  initTexture(houseFloorTexture, resources.housefloortexture);
+
+  houseWallTexture = gl.createTexture();
+  initTexture(houseWallTexture, resources.housewalltexture);
+
+  mossTexture = gl.createTexture();
+  initTexture(mossTexture, resources.mosstexture);
+
   concreteTexture = gl.createTexture();
-  gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, concreteTexture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, resources.concretetexture);
-  gl.bindTexture(gl.TEXTURE_2D, null);
+  initTexture(concreteTexture, resources.concretetexture);
 }
 
 function initTexture(texture, image){
