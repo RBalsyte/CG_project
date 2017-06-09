@@ -15,7 +15,8 @@ const maxMoveSpiritX = 32;
 
 const floorOffset = -2;
 
-const particleNumber = 300;
+var particleNumber = 200;
+var currentY = 10;
 
 var gl = null;
 
@@ -50,6 +51,40 @@ var mossTexture;
 //framebuffer variables
 var renderTargetFramebuffer;
 
+//Particle variables
+var particles = [];
+var particleTransformations = [];
+
+var particleVertexBuffer, particleColorBuffer, particleIndexBuffer;
+
+var s = 0.3; //size of cube
+var cubeVertices = new Float32Array([
+   -s,-s,-s, s,-s,-s, s, s,-s, -s, s,-s,
+   -s,-s, s, s,-s, s, s, s, s, -s, s, s,
+   -s,-s,-s, -s, s,-s, -s, s, s, -s,-s, s,
+   s,-s,-s, s, s,-s, s, s, s, s,-s, s,
+   -s,-s,-s, -s,-s, s, s,-s, s, s,-s,-s,
+   -s, s,-s, -s, s, s, s, s, s, s, s,-s,
+]);
+
+var cubeColors = new Float32Array([
+   0,1,1, 0,1,1, 0,1,1, 0,1,1,
+   1,0,1, 1,0,1, 1,0,1, 1,0,1,
+   1,0,0, 1,0,0, 1,0,0, 1,0,0,
+   0,0,1, 0,0,1, 0,0,1, 0,0,1,
+   1,1,0, 1,1,0, 1,1,0, 1,1,0,
+   0,1,0, 0,1,0, 0,1,0, 0,1,0
+]);
+
+var cubeIndices =  new Float32Array([
+   0,1,2, 0,2,3,
+   4,5,6, 4,6,7,
+   8,9,10, 8,10,11,
+   12,13,14, 12,14,15,
+   16,17,18, 16,18,19,
+   20,21,22, 20,22,23
+]);
+
 //load the required resources using a utility function
 loadResources({
   vs_single: 'shader/single.vs.glsl',
@@ -58,6 +93,8 @@ loadResources({
   fs_texture: 'shader/texture.fs.glsl',
   vs_spirit: 'shader/spirit.vs.glsl',
   fs_spirit: 'shader/spirit.fs.glsl',
+  vs_particle: 'shader/particle.vs.glsl',
+  fs_particle: 'shader/particle.fs.glsl',
   floortexture: 'models/grass.jpg',
   fencetexture: 'models/fence.jpg',
   concretetexture: 'models/concrete.jpg',
@@ -80,21 +117,45 @@ function init(resources) {
   height = window.innerHeight;
 
   initTextures(resources);
+  initParticleBuffer();
   initRenderToTexture();
 
   gl.enable(gl.DEPTH_TEST);
   root = createSceneGraph(gl, resources);
 }
 
+function initParticleBuffer(){
+  particleVertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, particleVertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, cubeVertices, gl.STATIC_DRAW);
+
+  particleColorBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, particleColorBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, cubeColors, gl.STATIC_DRAW);
+
+  particleIndexBuffer = gl.createBuffer ();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, particleIndexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeIndices), gl.STATIC_DRAW);
+}
+
 function createSceneGraph(gl, resources) {
   //create scenegraph
   const root = new ShaderSGNode(createProgram(gl, resources.vs_texture, resources.fs_texture));
+  spawnParticles();
 
- function makeRaindrop(){
-   return new ShaderSGNode(createProgram(gl, resources.vs_single, resources.fs_single), [
-     new RenderSGNode(makeRect(0.2,0.6))
-   ]);
- }
+  function spawnParticles(){
+      for(var i = 0; i <= particleNumber; i++){
+        particles.push(makeRaindrop());
+        particleTransformations.push(new TransformationSGNode(mat4.create()));
+      }
+  }
+
+  function makeRaindrop(){
+    return new ShaderSGNode(createProgram(gl, resources.vs_particle, resources.fs_particle), [
+      new RenderSGNode(makeRect(0.02, 0.03))
+    ]);
+  }
+
   //light debug helper function
   function createLightSphere() {
     return new ShaderSGNode(createProgram(gl, resources.vs_single, resources.fs_single), [
@@ -330,8 +391,22 @@ function createSceneGraph(gl, resources) {
     ]));
   }
 
-// append
+// append raindrops to root
   {
+    var randomX = getRandomInt(floorSize,-floorSize);
+    var startY = 10;
+    var randomZ = getRandomInt(floorSize,-floorSize)
+
+    for(var partIndex = 0; partIndex <= particleNumber; partIndex++){
+
+      particleTransformations[partIndex].append(particles[partIndex]);
+      root.append(particleTransformations[partIndex])
+
+      particleTransformations[partIndex].matrix = glm.translate(randomX, startY, randomZ);
+
+      var randomX = getRandomInt(floorSize,-floorSize);
+      var randomZ = getRandomInt(floorSize,-floorSize);
+    }
 
   }
 
@@ -447,6 +522,19 @@ function render(timeInMilliseconds) {
   moveSpiritHandNode.matrix = glm.rotateZ(Math.cos(timeInMilliseconds / 2 * 0.01) * 25);
   moveSpiritX=Math.abs((timeInMilliseconds*0.005)%(maxMoveSpiritX+0.0001) -maxMoveSpiritX/2) + maxMoveSpiritX/2;
   moveSpiritNode.matrix = glm.translate(moveSpiritX - 28, Math.abs(Math.cos(timeInMilliseconds/2*0.01)), -10);
+
+
+  if(currentY > floorOffset){
+    currentY = currentY - 0.1;
+  } else {
+    currentY = 10;
+  }
+  for(var i = 0; i <= particleNumber; i++){
+    // vary location of X
+    var randomX = getRandomInt(floorSize,-floorSize);
+    var randomZ = getRandomInt(floorSize,-floorSize);
+    particleTransformations[i].matrix = glm.translate(randomX, currentY, randomZ);
+  }
 
   mat4.perspective(context.projectionMatrix, glm.deg2rad(30), width / height, 0.01, 100);
   mat4.lookAt(context.viewMatrix, camera.position, camera.look, camera.up);
@@ -565,27 +653,20 @@ function createCylinder(segments, length, radius) {
 
 }
 
-function spawnParticles(){
-    var particles = [];
-
-    for(var i = 0; i <= this.particleNumber; i++){
-      particles.push(makeRaindrop());
-    }
-}
 
 
-class ParticleRenderNode extends SGNode {
-  constructor(position, velocity, color, life) {
-      super(children);
-      this.position = position;
-      this.velocity = velocity;
-      this.color = color;
-      this.life = life;
+
+class ParticleSGNode extends SGNode {
+
+  constructor(position) {
+    super();
+    this.position = position || vec3.create(); //vec3
   }
 
   render(context) {
     //setting the model view and projection matrix on shader
-    setUpModelViewMatrix(context.sceneMatrix, context.viewMatrix);
+    var modelViewMatrix = mat4.multiply(mat4.create(), context.viewMatrix, context.sceneMatrix);
+    gl.uniformMatrix4fv(gl.getUniformLocation(context.shader, 'u_modelView'), false, modelViewMatrix);
 
     var positionLocation = gl.getAttribLocation(context.shader, 'a_position');
     gl.bindBuffer(gl.ARRAY_BUFFER, particleVertexBuffer);
@@ -593,21 +674,23 @@ class ParticleRenderNode extends SGNode {
     gl.enableVertexAttribArray(positionLocation);
 
     var colorLocation = gl.getAttribLocation(context.shader, 'a_color');
-    gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
+    gl.bindBuffer(gl.ARRAY_BUFFER, particleColorBuffer);
     gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false,0,0) ;
     gl.enableVertexAttribArray(colorLocation);
 
-    gl.uniform1f(gl.getUniformLocation(context.shader, 'u_alpha'), 0.5);
+    gl.uniform1f(gl.getUniformLocation(context.shader, 'u_alpha'), 1);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, particleIndexBuffer);
-    gl.drawElements(gl.TRIANGLES, particleIndices.length, gl.UNSIGNED_SHORT, 0); //LINE_STRIP
+    gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0); //LINE_STRIP
 
     //render children
     super.render(context);
   }
 }
 
-function setUpModelViewMatrix(sceneMatrix, viewMatrix) {
-  var modelViewMatrix = mat4.multiply(mat4.create(), viewMatrix, sceneMatrix);
-  gl.uniformMatrix4fv(gl.getUniformLocation(context.shader, 'u_modelView'), false, modelViewMatrix);
+
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min)) + min;
 }
