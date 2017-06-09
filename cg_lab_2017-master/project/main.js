@@ -3,8 +3,8 @@
 */
 'use strict';
 
-const floorSize = 20;
-const floorCount = 20;
+const floorSize = 40;
+const floorCount = 40;
 const fenceHeight = 1;
 const fenceCount = 10;
 
@@ -45,6 +45,9 @@ var renderTargetDepthTexture;
 var floorTexture;
 var fenceTexture;
 var oldTexture;
+var houseFloorTexture;
+var houseWallTexture;
+var mossTexture;
 
 //framebuffer variables
 var renderTargetFramebuffer;
@@ -60,7 +63,12 @@ loadResources({
   floortexture: 'models/grass.jpg',
   fencetexture: 'models/fence.jpg',
   oldtexture: 'models/paint.jpg',
-  model: 'models/noFace.obj'
+  housefloortexture: 'models/tatami.jpg',
+  housewalltexture: 'models/houseWall.jpg',
+  mosstexture: 'models/moss.jpg',
+  housebody: 'models/houseBody.obj',
+  houseroof: 'models/houseRoof.obj',
+  noface: 'models/noFace.obj'
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
   render(0);
@@ -78,6 +86,37 @@ function init(resources) {
   root = createSceneGraph(gl, resources);
 }
 
+function initTextures(resources){
+  floorTexture = gl.createTexture();
+  initTexture(floorTexture, resources.floortexture);
+  
+  fenceTexture = gl.createTexture();
+  initTexture(fenceTexture, resources.fencetexture);
+  
+  oldTexture = gl.createTexture();
+  initTexture(oldTexture, resources.oldtexture);
+  
+  houseFloorTexture = gl.createTexture();
+  initTexture(houseFloorTexture, resources.housefloortexture);
+  
+  houseWallTexture = gl.createTexture();
+  initTexture(houseWallTexture, resources.housewalltexture);
+  
+  mossTexture = gl.createTexture();
+  initTexture(mossTexture, resources.mosstexture);
+}
+
+function initTexture(texture, image){
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
 function createSceneGraph(gl, resources) {
   //create scenegraph
   const root = new ShaderSGNode(createProgram(gl, resources.vs_texture, resources.fs_texture));
@@ -89,10 +128,10 @@ function createSceneGraph(gl, resources) {
     ]);
   }
   
-  function makeFloor() {
-    var floor = makeRect(floorSize, floorSize);
+  function makeFloor(width, height, textureRepeatCount) {
+    var floor = makeRect(width, height);
     //adapt texture coordinates
-    floor.texture = [0, 0, floorCount, 0, floorCount, floorCount, 0, floorCount];
+    floor.texture = [0, 0, textureRepeatCount, 0, textureRepeatCount, textureRepeatCount, 0, textureRepeatCount];
     return floor;
   }
   
@@ -105,9 +144,22 @@ function createSceneGraph(gl, resources) {
   {
     camera = new Camera(root, gl.canvas, movementSpeed, mouseSpeed);
   }
-  
   {
-    let floor = new MaterialSGNode(new TextureSGNode(floorTexture, 0, new RenderSGNode(makeFloor())));
+    //initialize light
+    let light = new LightSGNode(); //use now framework implementation of light node
+    light.ambient = [0.2, 0.2, 0.2, 1];
+    light.diffuse = [0.8, 0.8, 0.8, 1];
+    light.specular = [1, 1, 1, 1];
+    light.position = [0, 2, 12];
+    
+    rotateLight = new TransformationSGNode(mat4.create());
+    
+    rotateLight.append(light);
+    rotateLight.append(createLightSphere());
+    root.append(rotateLight);
+  }
+  {
+    let floor = new MaterialSGNode(new TextureSGNode(floorTexture, 0, new RenderSGNode(makeFloor(floorSize, floorSize, floorCount))));
     floor.ambient = [0, 0, 0, 1];
     floor.diffuse = [0.1, 0.1, 0.1, 1];
     floor.specular = [1, 1, 1, 1];
@@ -118,33 +170,48 @@ function createSceneGraph(gl, resources) {
   
   {
     let fence = new MaterialSGNode(new TextureSGNode(fenceTexture, 0, new RenderSGNode(makeFence()), oldTexture, 1));
-    fence.ambient = [0.2, 0.2, 0.2, 1.0];
-    fence.diffuse = [0.8, 0.8, 0.8, 1.0];
+    fence.ambient = [0.9, 0.9, 0.9, 1];
+    fence.diffuse = [0.8, 0.8, 0.8, 1];
     fence.specular = [0, 0, 0, 1];
     fence.emission = [0, 0, 0, 1];
-    fence.shininess = 0.0;
+    fence.shininess = 0;
     
-    root.append(new TransformationSGNode(glm.transform({ translate: [0, fenceHeight + floorOffset, floorSize], scale: 1}), [fence]));
-    root.append(new TransformationSGNode(glm.transform({ translate: [0, fenceHeight + floorOffset, -floorSize], scale: 1}), [fence]));
-    root.append(new TransformationSGNode(glm.transform({ translate: [floorSize, fenceHeight + floorOffset, 0], rotateY: 90, scale: 1}), [fence]));
-    root.append(new TransformationSGNode(glm.transform({ translate: [-floorSize, fenceHeight + floorOffset, 0], rotateY: -90, scale: 1}), [fence]));
+    root.append(new TransformationSGNode(glm.transform({ translate: [0, fenceHeight + floorOffset, -floorSize], rotateZ: 180, scale: 1}), [Object.create(fence)]));
+    root.append(new TransformationSGNode(glm.transform({ translate: [0, fenceHeight + floorOffset, floorSize], rotateZ: 180, rotateY: 180, scale: 1}), [Object.create(fence)]));
+    root.append(new TransformationSGNode(glm.transform({ translate: [floorSize, fenceHeight + floorOffset, 0], rotateZ: 180, rotateY: -90, scale: 1}), [Object.create(fence)]));
+    root.append(new TransformationSGNode(glm.transform({ translate: [-floorSize, fenceHeight + floorOffset, 0], rotateZ: 180, rotateY: 90, scale: 1}), [fence]));
   }
   
   {
-    //initialize light
-    let light = new LightSGNode(); //use now framework implementation of light node
-    light.ambient = [0.2, 0.2, 0.2, 1];
-    light.diffuse = [0.8, 0.8, 0.8, 1];
-    light.specular = [1, 1, 1, 1];
-    light.position = [0, 0, 0];
+    let houseBody = new MaterialSGNode(new TextureSGNode(houseWallTexture, 0, new RenderSGNode(resources.housebody), mossTexture, 1));
+    houseBody.ambient = [0.3, 0.3, 0.2, 1];
+    houseBody.diffuse = [0.1, 0.1, 0.1, 1];
+    houseBody.specular = [0, 0, 0, 1];
+    houseBody.emission = [0, 0, 0, 1];
+    houseBody.shininess = 0.0;
+    root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset-1, 0]}), [houseBody]));
+  }
+  
+  {
+    //initialize No Face
+    let houseRoof = new MaterialSGNode([new RenderSGNode(resources.houseroof)]);
+    houseRoof.ambient = [0.3, 0.3, 0.2, 1];
+    houseRoof.diffuse = [0.1, 0.1, 0.1, 1];
+    houseRoof.specular = [0, 0, 0, 1];
+    houseRoof.emission = [0, 0, 0, 1];
+    houseRoof.shininess = 0.0;
+    root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset-1, 0]}), [houseRoof]));
+  }
+  
+  {
+    //initialize No Face
+    let houseFloor = new MaterialSGNode(new TextureSGNode(houseFloorTexture, 0, new RenderSGNode(makeFloor(15, 10, 20))));
+    houseFloor.ambient = [0, 0, 0, 1];
+    houseFloor.diffuse = [0.1, 0.1, 0.1, 1];
+    houseFloor.specular = [1, 1, 1, 1];
+    houseFloor.shininess = 10;
     
-    rotateLight = new TransformationSGNode(mat4.create());
-    let translateLight = new TransformationSGNode(glm.translate(0,2,2));
-    
-    rotateLight.append(translateLight);
-    translateLight.append(light);
-    translateLight.append(createLightSphere());
-    root.append(rotateLight);
+    root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset + 0.05, 0], rotateX: -90, scale: 1}), [houseFloor]));
   }
   
   {
@@ -218,7 +285,7 @@ function createSceneGraph(gl, resources) {
   {
     //initialize No Face
     noFaceNode = new MaterialSGNode([ //use now framework implementation of material node
-      new RenderSGNode(resources.model)
+      new RenderSGNode(resources.noface)
     ]);
     //gold
     noFaceNode.ambient = [0, 0, 0, 1];
@@ -227,33 +294,12 @@ function createSceneGraph(gl, resources) {
     noFaceNode.emission = [0, 0, 0, 1];
     noFaceNode.shininess = 0.0;
     
-    root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset, 0], scale: [0.4,1,0.4]}), [noFaceNode]));
+    root.append(new TransformationSGNode(glm.translate(0, floorOffset + 2, 0), [noFaceNode]));
   }
   
   return root;
 }
 
-function initTextures(resources){
-  floorTexture = gl.createTexture();
-  initTexture(floorTexture, resources.floortexture);
-  
-  fenceTexture = gl.createTexture();
-  initTexture(fenceTexture, resources.fencetexture);
-  
-  oldTexture = gl.createTexture();
-  initTexture(oldTexture, resources.oldtexture);
-}
-
-function initTexture(texture, image){
-  gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-  gl.bindTexture(gl.TEXTURE_2D, null);
-}
 
 function initRenderToTexture() {
   
@@ -340,16 +386,20 @@ class TextureSGNode extends SGNode {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
     
-    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_tex2'), this.textureunit2);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this.texture2);
+    if (typeof this.texture2 !== "undefined"){
+      gl.uniform1i(gl.getUniformLocation(context.shader, 'u_tex2'), this.textureunit2);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.texture2);
+    }
     
     super.render(context);
     
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, null);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, null);
+    if (typeof this.texture2 !== "undefined"){
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    }
     
     gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableObjectTexture'), 0);
   }
