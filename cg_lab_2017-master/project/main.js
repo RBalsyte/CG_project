@@ -108,6 +108,13 @@ function createSceneGraph(gl, resources) {
     return fence;
   }
 
+  function makeRectangle(width, height, textureRepeatCountHorizontally, textureRepeatCountVertically) {
+  var rectangle = makeRect(width, height);
+  //adapt texture coordinates
+  rectangle.texture = [0, 0, textureRepeatCountHorizontally, 0, textureRepeatCountHorizontally, textureRepeatCountVertically, 0, textureRepeatCountVertically];
+  return rectangle;
+}
+
   {
     camera = new Camera(root, gl.canvas, movementSpeed, mouseSpeed);
   }
@@ -152,6 +159,35 @@ function createSceneGraph(gl, resources) {
     root.append(new TransformationSGNode(glm.transform({ translate: [floorSize, fenceHeight + floorOffset, 0], rotateY: -90, scale: 1}), [Object.create(fence)]));
     root.append(new TransformationSGNode(glm.transform({ translate: [-floorSize, fenceHeight + floorOffset, 0], rotateY: 90, scale: 1}), [fence]));
   }
+
+  {
+  let houseBody = new MaterialSGNode(new TextureSGNode(houseWallTexture, 0, new RenderSGNode(resources.housebody), mossTexture, 1));
+  houseBody.ambient = [0.3, 0.3, 0.2, 1];
+  houseBody.diffuse = [0.1, 0.1, 0.1, 1];
+  houseBody.specular = [0, 0, 0, 1];
+  houseBody.emission = [0, 0, 0, 1];
+  houseBody.shininess = 0.0;
+  root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset-1, 0]}), [houseBody]));
+}
+
+{
+  let houseRoof = new MaterialSGNode([new RenderSGNode(resources.houseroof)]);
+  houseRoof.ambient = [0.3, 0.3, 0.2, 1];
+  houseRoof.diffuse = [0.1, 0.1, 0.1, 1];
+  houseRoof.specular = [0, 0, 0, 1];
+  houseRoof.emission = [0, 0, 0, 1];
+  houseRoof.shininess = 0.0;
+  root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset-1, 0]}), [houseRoof]));
+}
+
+{
+  let houseFloor = new MaterialSGNode(new TextureSGNode(houseFloorTexture, 0, new RenderSGNode(makeRectangle(15, 10, 20, 20))));
+  houseFloor.ambient = [0, 0, 0, 1];
+  houseFloor.diffuse = [0.1, 0.1, 0.1, 1];
+  houseFloor.specular = [1, 1, 1, 1];
+  houseFloor.shininess = 10;
+  root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset + 0.05, 0], rotateX: -90, scale: 1}), [houseFloor]));
+}
 
   {
    let cylinderMaterial = new MaterialSGNode(new TextureSGNode(concreteTexture, 0, new RenderSGNode(createCylinder(15, 1, 0.5))));
@@ -234,18 +270,13 @@ function createSceneGraph(gl, resources) {
   }
 
   {
-    //initialize No Face
-    noFaceNode = new MaterialSGNode([ //use now framework implementation of material node
-      new RenderSGNode(resources.noface)
-    ]);
-    //gold
+    noFaceNode = new MaterialSGNode([new RenderSGNode(resources.noface)]);
     noFaceNode.ambient = [0, 0, 0, 1];
     noFaceNode.diffuse = [0.1, 0.1, 0.1, 1];
     noFaceNode.specular = [0, 0, 0, 1];
     noFaceNode.emission = [0, 0, 0, 1];
     noFaceNode.shininess = 0.0;
-
-    root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset, 0], scale: [0.4,1,0.4]}), [noFaceNode]));
+    root.append(new TransformationSGNode(glm.translate(0, floorOffset + 2, 0), [noFaceNode]));
   }
 
   {
@@ -260,7 +291,7 @@ function createSceneGraph(gl, resources) {
     tree.shininess = 0.7;
 
     root.append(new TransformationSGNode(glm.transform({
-      translate: [5, -1, 8],
+      translate: [5, floorOffset, 8],
       rotateX: 2,
       scale: 0.2
     }), [
