@@ -15,6 +15,8 @@ const maxMoveSpiritX = 32;
 
 const floorOffset = -2;
 
+const particleNumber = 300;
+
 var gl = null;
 
 //default
@@ -88,6 +90,11 @@ function createSceneGraph(gl, resources) {
   //create scenegraph
   const root = new ShaderSGNode(createProgram(gl, resources.vs_texture, resources.fs_texture));
 
+ function makeRaindrop(){
+   return new ShaderSGNode(createProgram(gl, resources.vs_single, resources.fs_single), [
+     new RenderSGNode(makeRect(0.2,0.6))
+   ]);
+ }
   //light debug helper function
   function createLightSphere() {
     return new ShaderSGNode(createProgram(gl, resources.vs_single, resources.fs_single), [
@@ -167,7 +174,15 @@ function createSceneGraph(gl, resources) {
   houseBody.specular = [0, 0, 0, 1];
   houseBody.emission = [0, 0, 0, 1];
   houseBody.shininess = 0.0;
-  root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset-1, 0]}), [houseBody]));
+
+  root.append(new TransformationSGNode(glm.transform({
+    translate: [8, floorOffset-0.5, 9],
+    scale: [0.5,0.5,1]
+  }), [
+    houseBody
+  ]));
+
+  //root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset-1, 0]}), [houseBody]));
 }
 
 {
@@ -177,7 +192,14 @@ function createSceneGraph(gl, resources) {
   houseRoof.specular = [0, 0, 0, 1];
   houseRoof.emission = [0, 0, 0, 1];
   houseRoof.shininess = 0.0;
-  root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset-1, 0]}), [houseRoof]));
+
+  root.append(new TransformationSGNode(glm.transform({
+    translate: [8, floorOffset-0.6, 9],
+    scale: [0.5,0.5,1]
+  }), [
+    houseRoof
+  ]));
+  //root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset-1, 0]}), [houseRoof]));
 }
 
 {
@@ -186,7 +208,16 @@ function createSceneGraph(gl, resources) {
   houseFloor.diffuse = [0.1, 0.1, 0.1, 1];
   houseFloor.specular = [1, 1, 1, 1];
   houseFloor.shininess = 10;
-  root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset + 0.05, 0], rotateX: -90, scale: 1}), [houseFloor]));
+
+  root.append(new TransformationSGNode(glm.transform({
+    translate: [8, floorOffset + 0.05, 9],
+    rotateX: -90,
+    scale: [0.5,1,1]
+  }), [
+    houseFloor
+  ]));
+
+  //root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset + 0.05, 0], rotateX: -90, scale: 1}), [houseFloor]));
 }
 
   {
@@ -276,7 +307,7 @@ function createSceneGraph(gl, resources) {
     noFaceNode.specular = [0, 0, 0, 1];
     noFaceNode.emission = [0, 0, 0, 1];
     noFaceNode.shininess = 0.0;
-    root.append(new TransformationSGNode(glm.translate(0, floorOffset + 2, 0), [noFaceNode]));
+    root.append(new TransformationSGNode(glm.translate(7, floorOffset-0.5 , 5), [noFaceNode]));
   }
 
   {
@@ -291,12 +322,17 @@ function createSceneGraph(gl, resources) {
     tree.shininess = 0.7;
 
     root.append(new TransformationSGNode(glm.transform({
-      translate: [5, floorOffset, 8],
+      translate: [-10, floorOffset+0.5, -3],
       rotateX: 2,
       scale: 0.2
     }), [
       tree
     ]));
+  }
+
+// append
+  {
+
   }
 
   return root;
@@ -408,7 +444,7 @@ function render(timeInMilliseconds) {
   camera.move(timeInMilliseconds);
   rotateLight.matrix = glm.rotateY(timeInMilliseconds * 0.05);
 
-   moveSpiritHandNode.matrix = glm.rotateX(Math.cos(timeInMilliseconds / 2 * 0.01) * 15);
+  moveSpiritHandNode.matrix = glm.rotateZ(Math.cos(timeInMilliseconds / 2 * 0.01) * 25);
   moveSpiritX=Math.abs((timeInMilliseconds*0.005)%(maxMoveSpiritX+0.0001) -maxMoveSpiritX/2) + maxMoveSpiritX/2;
   moveSpiritNode.matrix = glm.translate(moveSpiritX - 28, Math.abs(Math.cos(timeInMilliseconds/2*0.01)), -10);
 
@@ -527,4 +563,51 @@ function createCylinder(segments, length, radius) {
     index: indices
   };
 
+}
+
+function spawnParticles(){
+    var particles = [];
+
+    for(var i = 0; i <= this.particleNumber; i++){
+      particles.push(makeRaindrop());
+    }
+}
+
+
+class ParticleRenderNode extends SGNode {
+  constructor(position, velocity, color, life) {
+      super(children);
+      this.position = position;
+      this.velocity = velocity;
+      this.color = color;
+      this.life = life;
+  }
+
+  render(context) {
+    //setting the model view and projection matrix on shader
+    setUpModelViewMatrix(context.sceneMatrix, context.viewMatrix);
+
+    var positionLocation = gl.getAttribLocation(context.shader, 'a_position');
+    gl.bindBuffer(gl.ARRAY_BUFFER, particleVertexBuffer);
+    gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false,0,0) ;
+    gl.enableVertexAttribArray(positionLocation);
+
+    var colorLocation = gl.getAttribLocation(context.shader, 'a_color');
+    gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
+    gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false,0,0) ;
+    gl.enableVertexAttribArray(colorLocation);
+
+    gl.uniform1f(gl.getUniformLocation(context.shader, 'u_alpha'), 0.5);
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, particleIndexBuffer);
+    gl.drawElements(gl.TRIANGLES, particleIndices.length, gl.UNSIGNED_SHORT, 0); //LINE_STRIP
+
+    //render children
+    super.render(context);
+  }
+}
+
+function setUpModelViewMatrix(sceneMatrix, viewMatrix) {
+  var modelViewMatrix = mat4.multiply(mat4.create(), viewMatrix, sceneMatrix);
+  gl.uniformMatrix4fv(gl.getUniformLocation(context.shader, 'u_modelView'), false, modelViewMatrix);
 }
