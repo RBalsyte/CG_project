@@ -105,7 +105,8 @@ loadResources({
   mosstexture: 'models/moss.jpg',
   housebody: 'models/houseBody.obj',
   houseroof: 'models/houseRoof.obj',
-  noface: 'models/noFace.obj'
+  noface: 'models/noFace.obj',
+  nofacemask: 'models/mask.obj'
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
   render(0);
@@ -357,6 +358,16 @@ function createSceneGraph(gl, resources) {
   }
   
   {
+    let maskNode = new MaterialSGNode([new RenderSGNode(resources.nofacemask)]);
+    maskNode.ambient = [1, 1, 1, 1];
+    maskNode.diffuse = [0.1, 0.1, 0.1, 1];
+    maskNode.specular = [0, 0, 0, 1];
+    maskNode.emission = [0, 0, 0, 1];
+    maskNode.shininess = 0.0;
+    root.append(new TransformationSGNode(glm.translate(10, floorOffset + 3 , -15), [maskNode]));
+  }
+  
+  {
     //initialize Tree
     let tree = new MaterialSGNode([ //use now framework implementation of material node
       new RenderSGNode(resources.tree_model_01)
@@ -483,6 +494,9 @@ function render(timeInMilliseconds) {
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
   gl.clearColor(0.435, 0.506, 0.635, 1.0); // sky blue color as background
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   
   const context = createSGContext(gl);
   context.timeInMilliseconds = timeInMilliseconds;
@@ -623,9 +637,6 @@ function createCylinder(segments, length, radius) {
   };
   
 }
-
-
-
 
 class ParticleSGNode extends SGNode {
   

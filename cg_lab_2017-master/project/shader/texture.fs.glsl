@@ -75,7 +75,9 @@ vec4 color1 = texture2D(u_tex2, v_texCoord);
 textureColor = color0 + color1;
 }
 
+textureColor = calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor);
+//textureColor.a = 0.5;
 
-gl_FragColor = calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor);
+gl_FragColor = textureColor;
 
 }
