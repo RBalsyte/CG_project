@@ -31,14 +31,21 @@ function Camera(scene, canvas, speed, mouseSpeed) {
     self.pressedKeys[event.code] = true;
   }
   
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('keydown', onKeyDown);
-  document.addEventListener('keyup', onKeyUp);
+  var onMouseWheel = function(event){
+    self.mouseWheelDelta += event.wheelDelta ? event.wheelDelta : -event.detail;
+  }
+  
+  document.addEventListener('mousemove', onMouseMove, false);
+  document.addEventListener('keydown', onKeyDown, false);
+  document.addEventListener('keyup', onKeyUp, false);
+  document.addEventListener('mousewheel', onMouseWheel, false);
+  document.addEventListener("DOMMouseScroll", onMouseWheel, false);
   
   this.dispose = function() {
-    document.removeEventListener( 'mousemove', onMouseMove);
-    document.removeEventListener( 'keydown', onKeyDown);
-    document.removeEventListener( 'keyup', onKeyUp);
+    document.removeEventListener( 'mousemove', onMouseMove, false);
+    document.removeEventListener( 'keydown', onKeyDown, false);
+    document.removeEventListener( 'keyup', onKeyUp, false);
+    document.removeEventListener( 'mousewheel', onMouseWheel, false);
   };
 }
 
@@ -59,6 +66,10 @@ Camera.prototype.move = function (timeInMilliseconds) {
     Math.cos(this.horizontalAngle - this.PI_2)
   );
   
+  if (this.mouseWheelDelta != 0){
+    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, this.mouseWheelDelta);
+    this.mouseWheelDelta = 0;
+  }
   if (this.pressedKeys['KeyW']) {
     mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed);
   }
@@ -89,4 +100,5 @@ Camera.prototype.reset = function () {
   
   this.horizontalAngle = Math.PI;
   this.verticalAngle = 0;
+  this.mouseWheelDelta = 0;
 }

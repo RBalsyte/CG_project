@@ -139,7 +139,7 @@ function createSceneGraph(gl, resources) {
     fence.emission = [0, 0, 0, 1];
     fence.shininess = 0.0;
 
-    root.append(new TransformationSGNode(glm.transform({ translate: [0, fenceHeight + floorOffset, floorSize], rotateY: 180, rotateZ:-180, scale: 1}), [Object.create(fence)]));
+    root.append(new TransformationSGNode(glm.transform({ translate: [0, fenceHeight + floorOffset, floorSize], rotateY: 180, scale: 1}), [Object.create(fence)]));
     root.append(new TransformationSGNode(glm.transform({ translate: [0, fenceHeight + floorOffset, -floorSize],  scale: 1}), [Object.create(fence)]));
     root.append(new TransformationSGNode(glm.transform({ translate: [floorSize, fenceHeight + floorOffset, 0], rotateY: -90, scale: 1}), [Object.create(fence)]));
     root.append(new TransformationSGNode(glm.transform({ translate: [-floorSize, fenceHeight + floorOffset, 0], rotateY: 90, scale: 1}), [fence]));
