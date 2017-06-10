@@ -7,6 +7,9 @@ const floorSize = 40;
 const floorCount = 20;
 const fenceHeight = 1;
 const fenceCount = 10;
+const windowSize = 1;
+const windowHeight = 1.3;
+const windowCount = 5;
 
 const movementSpeed = 0.005;
 const mouseSpeed = 0.00002;
@@ -48,6 +51,7 @@ var oldTexture;
 var houseFloorTexture;
 var houseWallTexture;
 var mossTexture;
+var windowTexture;
 
 //framebuffer variables
 var renderTargetFramebuffer;
@@ -62,6 +66,7 @@ loadResources({
   floortexture: 'models/grass.jpg',
   fencetexture: 'models/fence.jpg',
   concretetexture: 'models/concrete.jpg',
+  windowtexture: 'models/window.jpg',
   tree_model_01: 'models/tree01.obj',
   oldtexture: 'models/paint.jpg',
   housefloortexture: 'models/tatami.jpg',
@@ -98,6 +103,12 @@ function createSceneGraph(gl, resources) {
     return new ShaderSGNode(createProgram(gl, resources.vs_single, resources.fs_single), [
       new RenderSGNode(makeSphere(0.2, 10, 10))
     ]);
+  }
+  
+  function makeWindow(){
+    var window = makeRect(windowSize , windowHeight);
+    window.texture = [0, 0, 1, 0, 1, 1, 0, 1];
+    return window;
   }
   
   function makeRectangle(width, height, textureRepeatCountHorizontally, textureRepeatCountVertically) {
@@ -156,6 +167,19 @@ function createSceneGraph(gl, resources) {
   }
   
   {
+    let window = new TransparentMaterialSGNode(new TextureSGNode(windowTexture, 0, new RenderSGNode(makeWindow())));
+    window.ambient = [0, 0, 0, 1];
+    window.diffuse = [0.1, 0.1, 0.1, 1];
+    window.specular = [1, 1, 1, 1];
+    window.shininess = 10;
+    window.alpha = 0.5;
+    
+    let windowNode = new TransformationSGNode(glm.transform({ translate: [4.5, -0.1, -1], rotateZ:-90, scale: 1}), [window]);
+    shadowNode.append(windowNode);
+    rootnofloor.append(windowNode);
+  }
+  
+  {
     let fence = new TransparentMaterialSGNode(new TextureSGNode(fenceTexture, 0, new RenderSGNode(makeRectangle(floorSize, fenceHeight, fenceCount, 1)), oldTexture, 1));
     fence.ambient = [0, 0, 0, 1];
     fence.diffuse = [0.1, 0.1, 0.1, 1];
@@ -183,7 +207,6 @@ function createSceneGraph(gl, resources) {
     houseBody.diffuse = [0.1, 0.1, 0.1, 1];
     houseBody.specular = [0.5, 0.5, 0.5, 1];
     houseBody.shininess = 50.0;
-    houseBody.alpha = 0.1;
     
     let houseBodyNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset-0.5, 9], scale: [0.5,0.5,1]}), [houseBody]);
     shadowNode.append(houseBodyNode);
@@ -306,6 +329,9 @@ function initTextures(resources){
   
   concreteTexture = gl.createTexture();
   initTexture(concreteTexture, resources.concretetexture);
+  
+  windowTexture = gl.createTexture();
+  initTexture(windowTexture, resources.windowtexture);
 }
 
 function initTexture(texture, image){
