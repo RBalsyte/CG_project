@@ -7,6 +7,9 @@ const floorSize = 20;
 const floorCount = 20;
 const fenceHeight = 1;
 const fenceCount = 10;
+const windowSize = 1;
+const windowHeight = 1.3;
+const windowCount = 5;
 
 const movementSpeed = 0.005;
 const mouseSpeed = 0.00002;
@@ -14,6 +17,7 @@ const mouseSpeed = 0.00002;
 const maxMoveSpiritX = 32;
 
 const floorOffset = -2;
+var particleShader;
 
 var particleNumber = 200;
 var currentY = 10;
@@ -47,11 +51,15 @@ var oldTexture;
 var houseFloorTexture;
 var houseWallTexture;
 var mossTexture;
+var windowTexture;
 
 //framebuffer variables
 var renderTargetFramebuffer;
 
+
+
 //Particle variables
+var particlesMesh = [];
 var particles = [];
 var particleTransformations = [];
 
@@ -98,6 +106,7 @@ loadResources({
   floortexture: 'models/grass.jpg',
   fencetexture: 'models/fence.jpg',
   concretetexture: 'models/concrete.jpg',
+  windowtexture: 'models/window.jpg',
   tree_model_01: 'models/tree01.obj',
   oldtexture: 'models/paint.jpg',
   housefloortexture: 'models/tatami.jpg',
@@ -141,20 +150,24 @@ function initParticleBuffer(){
 function createSceneGraph(gl, resources) {
   //create scenegraph
   const root = new ShaderSGNode(createProgram(gl, resources.vs_texture, resources.fs_texture));
+  particleShader = new ShaderSGNode(createProgram(gl, resources.vs_particle, resources.fs_particle));
   spawnParticles();
+
+  function initMesh(){
+    for(var i = 0; i <= particleNumber; i++){
+      particlesMesh.push(makeRaindrop());
+    }
+  }
 
   function spawnParticles(){
       for(var i = 0; i <= particleNumber; i++){
-        particles.push(makeRaindrop());
+        particles.push(new ParticleSGNode(particlesMesh));
         particleTransformations.push(new TransformationSGNode(mat4.create()));
       }
   }
 
   function makeRaindrop(){
-    return new ShaderSGNode(createProgram(gl, resources.vs_particle, resources.fs_particle), [
-      new ParticleSGNode(vec3.create())
-      //new RenderSGNode(makeRect(0.02, 0.03))
-    ]);
+      return new RenderSGNode(makeRect(0.02,0.05));
   }
 
   //light debug helper function
@@ -175,6 +188,12 @@ function createSceneGraph(gl, resources) {
     var fence = makeRect(floorSize, fenceHeight);
     fence.texture = [0, 0, fenceCount, 0, fenceCount, 1, 0, 1];
     return fence;
+  }
+
+  function makeWindow(){
+    var window = makeRect(windowSize , windowHeight);
+    window.texture = [0, 0, 1, 0, 1, 1, 0, 1];
+    return window;
   }
 
   function makeRectangle(width, height, textureRepeatCountHorizontally, textureRepeatCountVertically) {
@@ -216,6 +235,17 @@ function createSceneGraph(gl, resources) {
   }
 
   {
+    let windowNode = new MaterialSGNode(new TextureSGNode(windowTexture, 0, new RenderSGNode(makeWindow())));
+    windowNode.ambient = [0, 0, 0, 1];
+    windowNode.diffuse = [0.1, 0.1, 0.1, 1];
+    windowNode.specular = [1, 1, 1, 1];
+    windowNode.shininess = 10;
+
+
+    root.append(new TransformationSGNode(glm.transform({ translate: [4.5, -0.1, -1], rotateZ:-90, scale: 1}), [windowNode]));
+  }
+
+  {
     let fence = new MaterialSGNode(new TextureSGNode(fenceTexture, 0, new RenderSGNode(makeFence()), oldTexture, 1));
     fence.ambient = [0.2, 0.2, 0.2, 1.0];
     fence.diffuse = [0.8, 0.8, 0.8, 1.0];
@@ -244,7 +274,6 @@ function createSceneGraph(gl, resources) {
     houseBody
   ]));
 
-  //root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset-1, 0]}), [houseBody]));
 }
 
 {
@@ -401,7 +430,7 @@ function createSceneGraph(gl, resources) {
     for(var partIndex = 0; partIndex <= particleNumber; partIndex++){
 
       particleTransformations[partIndex].append(particles[partIndex]);
-      root.append(particleTransformations[partIndex])
+      particleShader.append(particleTransformations[partIndex])
 
       particleTransformations[partIndex].matrix = glm.translate(randomX, startY, randomZ);
 
@@ -409,6 +438,7 @@ function createSceneGraph(gl, resources) {
       var randomZ = getRandomInt(floorSize,-floorSize);
     }
 
+    root.append(particleShader);
   }
 
   return root;
@@ -435,6 +465,9 @@ function initTextures(resources){
 
   concreteTexture = gl.createTexture();
   initTexture(concreteTexture, resources.concretetexture);
+
+  windowTexture = gl.createTexture();
+  initTexture(windowTexture, resources.windowtexture);
 }
 
 function initTexture(texture, image){
@@ -446,20 +479,6 @@ function initTexture(texture, image){
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
   gl.bindTexture(gl.TEXTURE_2D, null);
-}
-
-
-function makeFloor() {
-  var floor = makeRect(floorSize, floorSize);
-  //adapt texture coordinates
-  floor.texture = [0, 0, floorCount, 0, floorCount, floorCount, 0, floorCount];
-  return floor;
-}
-
-function makeFence() {
-  var fence = makeRect(floorSize, 1);
-  fence.texture = [0, 0, 1, 0, 1, 1, 0, 1];
-  return fence;
 }
 
 function initRenderToTexture() {
@@ -495,24 +514,27 @@ function initRenderToTexture() {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
-function renderToTexture(timeInMilliseconds){
-  gl.bindFramebuffer(gl.FRAMEBUFFER, renderTargetFramebuffer);
-  gl.viewport(0, 0, width, height);
-  gl.clearColor(0.9, 0.9, 0.9, 1.0);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  const context = createSGContext(gl);
-  mat4.lookAt(context.viewMatrix, [0,1,-10], [0,0,0], [0,1,0]);
-  context.timeInMilliseconds = timeInMilliseconds;
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-}
+// function renderToTexture(timeInMilliseconds){
+//   gl.bindFramebuffer(gl.FRAMEBUFFER, renderTargetFramebuffer);
+//   gl.viewport(0, 0, width, height);
+//   gl.clearColor(0.9, 0.9, 0.9, 1.0);
+//   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+//   const context = createSGContext(gl);
+//   mat4.lookAt(context.viewMatrix, [0,1,-10], [0,0,0], [0,1,0]);
+//   context.timeInMilliseconds = timeInMilliseconds;
+//   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+// }
 
 function render(timeInMilliseconds) {
   checkForWindowResize(gl);
-  renderToTexture(timeInMilliseconds);
+//  renderToTexture(timeInMilliseconds);
 
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
   gl.clearColor(0.435, 0.506, 0.635, 1.0); // sky blue color as background
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
   const context = createSGContext(gl);
   context.timeInMilliseconds = timeInMilliseconds;
@@ -534,6 +556,7 @@ function render(timeInMilliseconds) {
     // vary location of X
     var randomX = getRandomInt(floorSize,-floorSize);
     var randomZ = getRandomInt(floorSize,-floorSize);
+    particleTransformations[i].matrix = glm.rotateY(randomX, currentY, randomZ);
     particleTransformations[i].matrix = glm.translate(randomX, currentY, randomZ);
   }
 
@@ -659,15 +682,13 @@ function createCylinder(segments, length, radius) {
 
 class ParticleSGNode extends SGNode {
 
-  constructor(position, children) {
+  constructor(mesh, children) {
     super(children);
-    this.position = position || vec3.create(); //vec3
+    this.mesh = mesh;
   }
 
   render(context) {
-    //setting the model view and projection matrix on shader
-    var modelViewMatrix = mat4.multiply(mat4.create(), context.viewMatrix, context.sceneMatrix);
-    gl.uniformMatrix4fv(gl.getUniformLocation(context.shader, 'u_modelView'), false, modelViewMatrix);
+    // //setting the model view and projection matrix on shader
 
     var positionLocation = gl.getAttribLocation(context.shader, 'a_position');
     gl.bindBuffer(gl.ARRAY_BUFFER, particleVertexBuffer);

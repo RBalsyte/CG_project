@@ -6,6 +6,8 @@ attribute vec3 a_color;
 
 varying vec3 v_color;
 
+uniform float time;
+uniform vec3 particle_pos;
 uniform mat4 u_modelView;
 uniform mat4 u_projection;
 
