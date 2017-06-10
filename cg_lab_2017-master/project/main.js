@@ -183,6 +183,7 @@ function createSceneGraph(gl, resources) {
     houseBody.diffuse = [0.1, 0.1, 0.1, 1];
     houseBody.specular = [0.5, 0.5, 0.5, 1];
     houseBody.shininess = 50.0;
+    houseBody.alpha = 0.1;
     
     let houseBodyNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset-0.5, 9], scale: [0.5,0.5,1]}), [houseBody]);
     shadowNode.append(houseBodyNode);
@@ -580,6 +581,14 @@ class TransparentMaterialSGNode extends MaterialSGNode{
   }
   
   render(context) {
+    if (this.alpha != 1){
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      gl.enable(gl.BLEND);
+      gl.disable(gl.DEPTH_TEST);
+    } else {
+      gl.disable(gl.BLEND);
+      gl.enable(gl.DEPTH_TEST);
+    }
     gl.uniform1f(gl.getUniformLocation(context.shader, this.uniform+'.alpha'), this.alpha);
     super.render(context);
   }
