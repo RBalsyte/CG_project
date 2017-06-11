@@ -7,40 +7,47 @@ function Camera(scene, canvas, speed, mouseSpeed) {
   this.canvas = canvas;
   this.speed = speed;
   this.mouseSpeed = mouseSpeed;
-  
+  this.movie = true;
+
   this.previousTime = 0;
   this.PI_2 = Math.PI / 2;
-  
+
   this.reset();
-  
+
   var self = this;
   var onMouseMove = function (event) {
-    var rect = self.canvas.getBoundingClientRect();
-    var x = event.clientX - rect.left;
-    var y = event.clientY - rect.top;
-    
-    self.horizontalAngle += self.mouseSpeed * (self.canvas.clientWidth/2 - x);
-    self.verticalAngle += self.mouseSpeed * (self.canvas.clientHeight/2 - y);
+    if (!self.movie){
+      var rect = self.canvas.getBoundingClientRect();
+      var x = event.clientX - rect.left;
+      var y = event.clientY - rect.top;
+
+      self.horizontalAngle += self.mouseSpeed * (self.canvas.clientWidth/2 - x);
+      self.verticalAngle += self.mouseSpeed * (self.canvas.clientHeight/2 - y);
+    }
   };
-  
+
   var onKeyUp = function(event){
     self.pressedKeys[event.code] = false;
   }
-  
+
   var onKeyDown = function(event){
-    self.pressedKeys[event.code] = true;
+    if (!self.movie){
+      self.pressedKeys[event.code] = true;
+    }
   }
-  
+
   var onMouseWheel = function(event){
-    self.mouseWheelDelta += event.wheelDelta ? event.wheelDelta : -event.detail;
+    if (!self.movie){
+      self.mouseWheelDelta += event.wheelDelta ? event.wheelDelta : -event.detail;
+    }
   }
-  
+
   document.addEventListener('mousemove', onMouseMove, false);
   document.addEventListener('keydown', onKeyDown, false);
   document.addEventListener('keyup', onKeyUp, false);
   document.addEventListener('mousewheel', onMouseWheel, false);
   document.addEventListener("DOMMouseScroll", onMouseWheel, false);
-  
+
   this.dispose = function() {
     document.removeEventListener( 'mousemove', onMouseMove, false);
     document.removeEventListener( 'keydown', onKeyDown, false);
@@ -49,55 +56,132 @@ function Camera(scene, canvas, speed, mouseSpeed) {
   };
 }
 
+Camera.prototype.autoMove = function(timeInMilliseconds, deltaTime) {
+
+  // 3 seconds -> 3 seconds total
+  if (timeInMilliseconds < 3*1000){
+    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed); // move forward
+    this.verticalAngle -= this.mouseSpeed * 10; // adjust vertical angle, so the camera doesnt look upwards
+  }
+  // 1 second
+  else if (timeInMilliseconds < 4*1000){
+    //pause to observe multitextured fence
+  }
+  // 2 seonds
+  else if (timeInMilliseconds < 6*1000){
+    this.horizontalAngle += this.mouseSpeed * 300; // rotate to the left
+  }
+  // 2 seconds
+  else if (timeInMilliseconds < 8*1000){
+    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed); // move forward
+  }
+  // 2 seconds
+  else if (timeInMilliseconds < 10*1000){
+      this.horizontalAngle += this.mouseSpeed * 500; // rotate to the left
+  }
+  // 3 seonds
+  else if (timeInMilliseconds < 13*1000){
+    //pause to observe spirits and the shadows
+  }
+  // 1 second
+  else if (timeInMilliseconds < 14*1000){
+    this.verticalAngle += this.mouseSpeed * 65; // start looking upwards
+  }
+  // 3 seconds
+  else if (timeInMilliseconds < 17*1000){
+      //pause to observe the spotlight
+  }
+  // 1 seond
+  else if (timeInMilliseconds < 19*1000){
+    this.verticalAngle -= this.mouseSpeed * 30; // start looking downwards
+    this.horizontalAngle += this.mouseSpeed * 300; // rotate to the left
+    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * (this.speed)); // move forward
+  }
+  // // 2 seond -> 12 seconds total
+  // else if (timeInMilliseconds < 20*1000){
+  //   mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * (this.speed + 0.05)); // move forward
+  // }
+  else if (timeInMilliseconds < 22*1000){
+    this.horizontalAngle -= this.mouseSpeed * 310; // rotate to the right
+    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed); // move forward
+  }
+  else if (timeInMilliseconds < 23*1000){
+    // pause to observe the inside of the hosue
+  }
+  else if (timeInMilliseconds < 24*1000){
+    this.verticalAngle -= this.mouseSpeed * 60; // start looking downwards
+  }
+  else if (timeInMilliseconds < 25*1000){
+    // pause to observe the multitextured floor
+  }
+  else if (timeInMilliseconds < 26*1000){
+    this.horizontalAngle += this.mouseSpeed * 420; // rotate to the left
+    this.verticalAngle += this.mouseSpeed * 65; // start looking upwards
+  }
+  else if (timeInMilliseconds < 30*1000){
+    // observe the no mask passing by
+  }
+  else{
+    this.movie = false;
+  }
+}
+
 Camera.prototype.move = function (timeInMilliseconds) {
-  
+
   var deltaTime = timeInMilliseconds - this.previousTime;
   this.previousTime = timeInMilliseconds;
-  
+
+  if (this.movie){
+    this.autoMove(timeInMilliseconds, deltaTime);
+  }
+
   this.direction = vec3.fromValues(
     Math.cos(this.verticalAngle) * Math.sin(this.horizontalAngle),
     Math.sin(this.verticalAngle),
     Math.cos(this.verticalAngle) * Math.cos(this.horizontalAngle)
   );
-  
+
   var right = vec3.fromValues(
     Math.sin(this.horizontalAngle - this.PI_2),
     0,
     Math.cos(this.horizontalAngle - this.PI_2)
   );
-  
+
   if (this.mouseWheelDelta != 0){
     mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, this.mouseWheelDelta);
     this.mouseWheelDelta = 0;
   }
-  if (this.pressedKeys['KeyW']) {
+  if (!this.movie && this.pressedKeys['KeyW']) {
     mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed);
   }
-  if (this.pressedKeys['KeyS']) {
+  if (!this.movie && this.pressedKeys['KeyS']) {
     mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, -deltaTime * this.speed);
   }
-  if (this.pressedKeys['KeyA']) {
+  if (!this.movie && this.pressedKeys['KeyA']) {
     mat3.multiplyScalarAndAdd(this.position, this.position, right, -deltaTime * this.speed);
   }
-  if (this.pressedKeys['KeyD']) {
+  if (!this.movie && this.pressedKeys['KeyD']) {
     mat3.multiplyScalarAndAdd(this.position, this.position, right, deltaTime * this.speed);
   }
-  if (this.pressedKeys['KeyR']){
+  if (this.pressedKeys['KeyM']){
+    this.movie = false;
+  }
+  if (!this.movie && this.pressedKeys['KeyR']){
     this.reset();
   }
-  
+
   this.look = mat3.add(vec3.create(), this.position, this.direction);
   this.up = vec3.cross(vec3.create(), right, this.direction);
 }
 
 Camera.prototype.reset = function () {
   this.pressedKeys = {};
-  
+
   this.position = vec3.create(0, 0, 5);
   this.direction = vec3.create();
   this.look = vec3.create(0, 0, 0);
   this.up = vec3.create();
-  
+
   this.horizontalAngle = Math.PI;
   this.verticalAngle = 0;
   this.mouseWheelDelta = 0;

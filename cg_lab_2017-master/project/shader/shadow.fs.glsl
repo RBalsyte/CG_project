@@ -43,6 +43,8 @@ varying vec3 v_spotlightVec;
 uniform bool u_enableObjectTexture;
 uniform sampler2D u_tex;
 uniform sampler2D u_tex2;
+uniform sampler2D u_tex3;
+uniform float u_alpha;
 uniform bool u_enableColorLookup;
 varying vec2 v_texCoord;
 varying lowp vec4 v_color;
@@ -180,7 +182,8 @@ void main (void) {
     {
         vec4 color0 = texture2D(u_tex, vec2(v_texCoord));
         vec4 color1 = texture2D(u_tex2, vec2(v_texCoord));
-        textureColor = color0 + color1;
+        vec4 color2 = texture2D(u_tex3, vec2(v_texCoord));
+        textureColor = color0 + color1 + color2 + vec4(0, 0, 0, u_alpha);
     }
 
     if (u_enableColorLookup){
