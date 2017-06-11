@@ -75,8 +75,8 @@ loadResources({
   housefloortexture: 'models/tatami.jpg',
   housewalltexture: 'models/houseWall.jpg',
   mosstexture: 'models/moss.jpg',
-  housebody: 'models/houseBody.obj',
-  houseroof: 'models/houseRoof.obj',
+  housebody: 'models/house2.obj',
+  houseroof: 'models/houseRoof2.obj',
   noface: 'models/noFace.obj',
   nofacemask: 'models/mask.obj'
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
@@ -147,8 +147,6 @@ function createSceneGraph(gl, resources) {
     shadowNode.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset, 0], rotateX: -90, scale: 1}), [floor]));
   }
 
-
-
   {
     let fence = new TransparentMaterialSGNode(new TextureSGNode(fenceTexture, 0, new RenderSGNode(makeRectangle(floorSize, fenceHeight, fenceCount, 1)), oldTexture, 1));
     fence.ambient = [0, 0, 0, 1];
@@ -176,32 +174,32 @@ function createSceneGraph(gl, resources) {
     shadowNode.append(rain);
   }
 
-{
-    let houseBody = new TransparentMaterialSGNode(new TextureSGNode(houseWallTexture, 0, new RenderSGNode(resources.housebody), mossTexture, 1));
-    houseBody.ambient = [0, 0, 0, 1];
-    houseBody.diffuse = [0.1, 0.1, 0.1, 1];
-    houseBody.specular = [0.5, 0.5, 0.5, 1];
-    houseBody.shininess = 50.0;
-
-    let houseBodyNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset-0.5, 9], scale: [0.5,0.5,1]}), [houseBody]);
-    shadowNode.append(houseBodyNode);
-    rootnofloor.append(houseBodyNode);
-  }
-
   {
     let houseRoof = new TransparentMaterialSGNode([new RenderSGNode(resources.houseroof)]);
     houseRoof.ambient = [0, 0, 0, 1];
     houseRoof.diffuse = [0.1, 0.1, 0.1, 1];
     houseRoof.specular = [0.5, 0.5, 0.5, 1];
-    houseRoof.shininess = 50.0;
+    houseRoof.shininess = 100.0;
 
-    let houseRoofNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset-0.6, 9], scale: [0.5,0.5,1]}), [houseRoof]);
+    let houseRoofNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset - 0.3, 9], scale: [0.5,0.5,1]}), [houseRoof]);
     shadowNode.append(houseRoofNode);
     rootnofloor.append(houseRoofNode);
   }
 
   {
-    let houseFloor = new TransparentMaterialSGNode(new TextureSGNode(houseFloorTexture, 0, new RenderSGNode(makeRectangle(15, 10, 20, 20))));
+    let houseBody = new TransparentMaterialSGNode([new RenderSGNode(resources.housebody)]);
+    houseBody.ambient = [0.9, 0, 0, 0.5];
+    houseBody.diffuse = [0.9, 0, 0, 0.5];
+    houseBody.specular = [0.5, 0.5, 0.5, 1];
+    houseBody.shininess = 100;
+
+    let houseBodyNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset-0.5, 9], rotateY: 180, scale: [0.5,0.5,1]}), [houseBody]);
+    shadowNode.append(houseBodyNode);
+    rootnofloor.append(houseBodyNode);
+  }
+
+  {
+    let houseFloor = new TransparentMaterialSGNode(new TextureSGNode(houseFloorTexture, 0, new RenderSGNode(makeRectangle(10, 10, 20, 20))));
     houseFloor.ambient = [0, 0, 0, 1];
     houseFloor.diffuse = [0.1, 0.1, 0.1, 1];
     houseFloor.specular = [0.5, 0.5, 0.5, 1];
@@ -212,17 +210,30 @@ function createSceneGraph(gl, resources) {
   }
 
   {
-    let windowNode = new TransparentMaterialSGNode(new TextureSGNode(windowTexture, 0, new RenderSGNode(makeWindow())));
-    windowNode.ambient = [0, 0, 0, 1];
-    windowNode.diffuse = [0.1, 0.1, 0.1, 1];
-    windowNode.specular = [1, 1, 1, 1];
-    windowNode.shininess = 10;
-    windowNode.alpha = 0.5;
+    let window1 = new TransparentMaterialSGNode(new TextureSGNode(windowTexture, 0, new RenderSGNode(makeRectangle(windowSize , windowHeight, 1, 1))));
+    window1.ambient = [0, 0, 0, 1];
+    window1.diffuse = [0.1, 0.1, 0.1, 1];
+    window1.specular = [1, 1, 1, 1];
+    window1.shininess = 10;
+    window1.alpha = 0.5;
 
-    let windowTransNode = new TransformationSGNode(glm.transform({ translate: [4.5, -0.1, -1], rotateZ:-90, rotateY:180, scale: 1}), [windowNode]);
-
-    shadowNode.append(windowTransNode);
+    let windowNode = new TransformationSGNode(glm.transform({ translate: [4.5, -0.1, -1], rotateZ:-90, scale: 1}), [window1]);
+    shadowNode.append(windowNode);
+    rootnofloor.append(windowNode);
   }
+
+  {
+  let window2 = new TransparentMaterialSGNode(new TestSGNode(windowSize , windowHeight, 0.2));
+  window2.ambient = [0, 0, 0, 1];
+  window2.diffuse = [0.1, 0.1, 0.1, 1];
+  window2.specular = [1, 1, 1, 1];
+  window2.shininess = 10;
+
+  let windowNode2 = new TransformationSGNode(glm.transform({ translate: [-10, floorOffset+2, -3], scale: 1}), [window2]);
+  shadowNode.append(windowNode2);
+  rootnofloor.append(windowNode2);
+}
+
 
   {
 
@@ -268,6 +279,10 @@ function createSceneGraph(gl, resources) {
     let nofaceNode = new TransformationSGNode(glm.transform({translate: [10, floorOffset + 2.5, -15], rotateZ : 125, scale: [1.5, 1.5, 1.5]}), [noface]);
     shadowNode.append(nofaceNode);
     rootnofloor.append(nofaceNode);
+
+    let nofaceNode2 = new TransformationSGNode(glm.transform({translate: [15, floorOffset + 2.5, -15], rotateZ : 125, scale: [1.5, 1.5, 1.5]}), [noface]);
+    shadowNode.append(nofaceNode2);
+    rootnofloor.append(nofaceNode2);
   }
 
   {
@@ -293,6 +308,7 @@ function createSceneGraph(gl, resources) {
     shadowNode.append(treeNode);
     rootnofloor.append(treeNode);
   }
+
 
 
   {
@@ -330,7 +346,8 @@ function createSceneGraph(gl, resources) {
   }
 
 
-    return root;
+
+  return root;
 }
 
 function initTextures(resources){
@@ -630,15 +647,201 @@ function createCylinder(segments, length, radius) {
 
 }
 
+class TestSGNode extends SGNode{
+
+  constructor(windowWidth, windowHeight, frameThickness, children) {
+    super(children);
+    this.windowWidth = windowWidth;
+    this.windowHeight = windowHeight;
+    this.frameThickness = frameThickness;
+    this.windowObject = this.makeWindow(this.windowWidth, this.windowHeight, this.frameThickness);
+
+    this.indexBuffer = null;
+    this.positionBuffer = null;
+    this.textCoordBuffer = null;
+    this.normalBuffer = null;
+    this.colorBuffer = null;
+  }
+
+  initBuffers(gl){
+    this.positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.windowObject.position), gl.STATIC_DRAW);
+
+    this.indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.windowObject.index), gl.STATIC_DRAW);
+
+    this.texCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.windowObject.texture), gl.STATIC_DRAW);
+
+    this.normalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.windowObject.normal), gl.STATIC_DRAW);
+
+    this.colorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.windowObject.color), gl.STATIC_DRAW);
+  }
+
+  setTransformationUniforms(context) {
+    //set matrix uniforms
+    const modelViewMatrix = mat4.multiply(mat4.create(), context.viewMatrix, context.sceneMatrix);
+    const normalMatrix = mat3.normalFromMat4(mat3.create(), modelViewMatrix);
+    const projectionMatrix = context.projectionMatrix;
+
+    gl.uniformMatrix4fv(gl.getUniformLocation(context.shader, 'u_modelView'), false, modelViewMatrix);
+    gl.uniformMatrix3fv(gl.getUniformLocation(context.shader, 'u_normalMatrix'), false, normalMatrix);
+    gl.uniformMatrix4fv(gl.getUniformLocation(context.shader, 'u_projection'), false, projectionMatrix);
+  }
+
+  setAttributes(context){
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+    var positionLoc = gl.getAttribLocation(context.shader, 'a_position');
+    if (isValidAttributeLocation(positionLoc)){
+      gl.enableVertexAttribArray(positionLoc);
+      gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false, 0, 0);
+    }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
+    var texCoordLoc = gl.getAttribLocation(context.shader, 'a_texCoord');
+    if (isValidAttributeLocation(texCoordLoc)){
+      gl.enableVertexAttribArray(texCoordLoc);
+      gl.vertexAttribPointer(texCoordLoc, 2, gl.FLOAT, false, 0, 0);
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
+    var normalLoc = gl.getAttribLocation(context.shader, 'a_normal');
+    if (isValidAttributeLocation(normalLoc)){
+      gl.enableVertexAttribArray(normalLoc);
+      gl.vertexAttribPointer(normalLoc, 3, gl.FLOAT, false, 0, 0);
+    }
+  }
+
+  render(context) {
+    this.setTransformationUniforms(context);
+
+    if (this.positionBuffer === null) {
+      this.initBuffers(context.gl);
+    }
+
+    this.setAttributes(context);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+    var colorLoc = gl.getAttribLocation(context.shader, 'a_color');
+    if (isValidAttributeLocation(colorLoc)){
+      gl.enableVertexAttribArray(colorLoc);
+      gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, 0, 0);
+    }
+
+    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableColorLookup'), 1);
+    // gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    // gl.enable(gl.BLEND);
+    // gl.disable(gl.DEPTH_TEST);
+
+    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    //render elements
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+    gl.drawElements(gl.TRIANGLES, this.windowObject.index.length, gl.UNSIGNED_SHORT, 0);
+
+    if (isValidAttributeLocation(colorLoc)){
+      gl.disableVertexAttribArray(colorLoc);
+    }
+
+    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableColorLookup'), 0);
+    gl.disable(gl.BLEND);
+    gl.enable(gl.DEPTH_TEST);
+    //render children
+    super.render(context);
+
+  }
+
+  makeWindow(width, height, frameThickness) {
+    width = width || 1;
+    height = height || 1;
+    frameThickness = frameThickness || 0.4;
+
+    var position = [
+      -width, -height, 0, width, -height, 0, width, -height + frameThickness, 0, -width, -height + frameThickness, 0, // upper frame
+      -width, -height + frameThickness, 0, -width, height, 0, -width + frameThickness, height, 0, -width + frameThickness, -height + frameThickness, 0, // left frame
+      width - frameThickness, -height + frameThickness, 0, width - frameThickness, height, 0, width, height, 0, width, -height + frameThickness, 0 ,// right frame
+      -width + frameThickness, height - frameThickness, 0, width - frameThickness, height - frameThickness, 0, width - frameThickness, height, 0, -width + frameThickness, height, 0, // downer frame
+      -width + frameThickness, -height + frameThickness, 0, width - frameThickness, -height + frameThickness, 0, width - frameThickness, height - frameThickness, 0, -width + frameThickness, height - frameThickness, 0 // glass
+    ];
+
+    var normal = [
+      0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
+      0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
+      0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
+      0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
+      0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1
+    ];
+
+    var texture = [
+      0, 0 /**/, 1, 0 /**/, 1, 1 /**/, 0, 1,
+      0, 0 /**/, 1, 0 /**/, 1, 1 /**/, 0, 1,
+      0, 0 /**/, 1, 0 /**/, 1, 1 /**/, 0, 1,
+      0, 0 /**/, 1, 0 /**/, 1, 1 /**/, 0, 1,
+      0, 0 /**/, 1, 0 /**/, 1, 1 /**/, 0, 1
+    ];
+
+    var index = [
+      0, 1, 2, 2, 3, 0,
+      4, 5, 6, 6, 7, 4,
+      8, 9, 10, 10, 11, 8,
+      12, 13, 14, 14, 15, 12,
+      16, 17, 18, 18, 19, 16
+    ];
+
+    var color = [
+      0.0,  0.0,  0.0,  1.0,    // black
+      0.0,  0.0,  0.0,  1.0,    // black
+      0.0,  0.0,  0.0,  1.0,    // black
+      0.0,  0.0,  0.0,  1.0,    // black
+      0.0,  0.0,  0.0,  1.0,    // black
+      0.0,  0.0,  0.0,  1.0,    // black
+      0.0,  0.0,  0.0,  1.0,    // black
+      0.0,  0.0,  0.0,  1.0,    // black
+
+      0.0,  0.0,  0.0,  1.0,    // black
+      0.0,  0.0,  0.0,  1.0,    // black
+      0.0,  0.0,  0.0,  1.0,    // black
+      0.0,  0.0,  0.0,  1.0,    // black
+
+      0.0,  0.0,  0.0,  1.0,    // black
+      0.0,  0.0,  0.0,  1.0,    // black
+      0.0,  0.0,  0.0,  1.0,    // black
+      0.0,  0.0,  0.0,  1.0,    // black
+
+      0.0,  0.0,  1.0,  0.25,    // blue
+      0.0,  0.0,  1.0,  0.25,    // blue
+      0.0,  0.0,  1.0,  0.25,    // blue
+      0.0,  0.0,  1.0,  0.25     // blue
+    ];
+
+    return {
+      position: position,
+      normal: normal,
+      texture: texture,
+      index: index,
+      color: color
+    };
+  }
+}
+
 class TransparentMaterialSGNode extends MaterialSGNode{
 
   constructor(children) {
     super(children);
-    this.alpha = 1;
+    this.color = [0, 0, 0, 1];
   }
 
   render(context) {
-    if (this.alpha != 1){
+
+    if (this.color[3] != 1){
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
       gl.enable(gl.BLEND);
       gl.disable(gl.DEPTH_TEST);
@@ -646,7 +849,7 @@ class TransparentMaterialSGNode extends MaterialSGNode{
       gl.disable(gl.BLEND);
       gl.enable(gl.DEPTH_TEST);
     }
-    gl.uniform1f(gl.getUniformLocation(context.shader, this.uniform+'.alpha'), this.alpha);
+    gl.uniform4fv(gl.getUniformLocation(context.shader, 'v_color'), this.color);
     super.render(context);
   }
 }
@@ -691,7 +894,6 @@ class RainSGNode extends SGNode {
 
     super.render(context);
   }
-
 
   getRandomInt(min, max) {
     min = Math.ceil(min);

@@ -1,33 +1,16 @@
 # CG_project To Dos
 
-<<<<<<< HEAD
-- Fix camera movement
- - add Flight Mode to camera - Done Done
- - add Scene Mode to camera - Create Scenes first
-
-- Finish borders ( Sky, Fence + Multitexturing, Floor - make bigger ) 
-=======
-+ Fix camera movement
-+ add Flight Mode to camera
 - Create Scenes
-+ Finish borders ( Sky, Fence + Multitexturing, Floor - make bigger ) 
->>>>>>> master
-- Create house from different rectangles or obj 
-- Create spirit from Obj or multiple vertices 
-	- Spirit created, need to convert arms and legs to cylinders or cubes (having problems with the shaders)
-	- Animation of jumping created
-	- Animation of hands is almost done, need another Node for the other hand
-	- Change color or add texture
-- Create big spirit model
-- Create tree from multiple vertices 
-- Create rain with particle system
-<<<<<<< HEAD
-
 - Create Light 
 	- fixed one (Sun)
 	- Moving light in the house
 	- Light Pole outside the house
-=======
-- Add multiple light sources
-- Add phong shading?
->>>>>>> master
+- Fix shading
+- Add 2nd texture to house floor
+- Add windows to the house
+- Add few things in the house
+- Adjust rain drop size and speed
+- Add more spirits
+
+- Write documentation
+- Add more comments + clean up the code

@@ -1,27 +1,23 @@
-// Phong Fragment Shader
-// Disclaimer: This phong shader implementation is neither performance optimized nor beautifully coded.
-// It shows the basic priciples in a simple way and is sufficient for our lab exercises.
 precision mediump float;
 
 /**
 * definition of a material structure containing common properties
 */
 struct Material {
-vec4 ambient;
-vec4 diffuse;
-vec4 specular;
-vec4 emission;
-float shininess;
-float alpha;
+    vec4 ambient;
+    vec4 diffuse;
+    vec4 specular;
+    vec4 emission;
+    float shininess;
 };
 
 /**
 * definition of the light properties related to material properties
 */
 struct Light {
-vec4 ambient;
-vec4 diffuse;
-vec4 specular;
+    vec4 ambient;
+    vec4 diffuse;
+    vec4 specular;
 };
 
 struct Spotlight {
@@ -45,9 +41,12 @@ varying vec3 v_spotlightVec;
 
 //texture related variables
 uniform bool u_enableObjectTexture;
-varying vec2 v_texCoord;
 uniform sampler2D u_tex;
 uniform sampler2D u_tex2;
+uniform bool u_enableColorLookup;
+varying vec2 v_texCoord;
+varying lowp vec4 v_color;
+
 
 //shadow map resolution (required for extra task)
 uniform float u_shadowMapWidth;
@@ -106,7 +105,7 @@ vec4 calcDirLight(Spotlight light, Material material,vec3 lightVec, vec3 normalV
     shadowCoeff = sumShadowCoeff/9.0;
 
     vec4 finalColor =  c_amb + shadowCoeff * (c_diff + c_spec) + c_em;
-    finalColor.a = finalColor.a * material.alpha;
+    finalColor.a = finalColor.a * textureColor.a;
     return finalColor;
 }
 
@@ -170,22 +169,25 @@ shadowCoeff = sumShadowCoeff/9.0;
 
 //TASK 2.5: apply shadow coefficient to diffuse and specular part
 vec4 finalColor =  c_amb + shadowCoeff * (c_diff + c_spec) + c_em;
-finalColor.a = finalColor.a * material.alpha;
+finalColor.a = finalColor.a * textureColor.a;
 return finalColor;
+
 }
 
 void main (void) {
 
-vec4 textureColor = vec4(0,0,0,1);
-if(u_enableObjectTexture)
-{
-vec4 color0 = texture2D(u_tex, v_texCoord);
-vec4 color1 = texture2D(u_tex2, v_texCoord);
-textureColor = color0 + color1;
-}
+    vec4 textureColor = vec4(0, 0, 0, 1);
+    if(u_enableObjectTexture)
+    {
+        vec4 color0 = texture2D(u_tex, vec2(v_texCoord));
+        vec4 color1 = texture2D(u_tex2, vec2(v_texCoord));
+        textureColor = color0 + color1;
+    }
 
-gl_FragColor = calcDirLight(u_spotlight, u_material,v_spotlightVec, v_normalVec, v_eyeVec, textureColor)+
+    if (u_enableColorLookup){
+      textureColor = v_color;
+    }
+
+gl_FragColor = //calcDirLight(u_spotlight, u_material,v_spotlightVec, v_normalVec, v_eyeVec, textureColor)+
                 calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor);
-
-
 }
