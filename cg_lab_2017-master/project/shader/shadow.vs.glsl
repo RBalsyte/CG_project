@@ -10,11 +10,14 @@ uniform mat4 u_projection;
 uniform mat4 u_invView;
 
 uniform vec3 u_lightPos;
+uniform vec3 u_spotlightPos;
+uniform vec3 u_spotlightDir;
 uniform mat4 u_eyeToLightMatrix;
 
 //output of this shader
 varying vec3 v_normalVec;
 varying vec3 v_lightVec;
+varying vec3 v_spotlightVec;
 varying vec3 v_eyeVec;
 varying vec2 v_texCoord;
 varying vec4 v_shadowMapTexCoord;
@@ -29,6 +32,8 @@ void main() {
 	//compute variables for light computation
   v_eyeVec = -eyePosition.xyz;
 	v_lightVec = u_lightPos - eyePosition.xyz;
+
+	v_spotlightVec =  u_spotlightPos - eyePosition.xyz;
 
 	//TASK 2.2: calculate vertex position in light clip space coordinates using u_eyeToLightMatrix (assign result to v_shadowMapTexCoord)
 	v_shadowMapTexCoord = u_eyeToLightMatrix*eyePosition;

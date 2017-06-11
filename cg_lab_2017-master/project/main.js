@@ -41,6 +41,8 @@ var lightNode;
 var moveSpiritNode;
 var moveSpiritHandNode;
 var noFaceNode;
+var spotlightNode;
+var translateSpotlight;
 
 //textures
 var renderTargetColorTexture;
@@ -56,41 +58,6 @@ var windowTexture;
 
 //framebuffer variables
 var renderTargetFramebuffer;
-
-//Particle variables
-var particlesMesh = [];
-var particles = [];
-var particleTransformations = [];
-
-var particleVertexBuffer, particleColorBuffer, particleIndexBuffer;
-
-var s = 0.3; //size of cube
-var cubeVertices = new Float32Array([
-   -s,-s,-s, s,-s,-s, s, s,-s, -s, s,-s,
-   -s,-s, s, s,-s, s, s, s, s, -s, s, s,
-   -s,-s,-s, -s, s,-s, -s, s, s, -s,-s, s,
-   s,-s,-s, s, s,-s, s, s, s, s,-s, s,
-   -s,-s,-s, -s,-s, s, s,-s, s, s,-s,-s,
-   -s, s,-s, -s, s, s, s, s, s, s, s,-s,
-]);
-
-var cubeColors = new Float32Array([
-   0,1,1, 0,1,1, 0,1,1, 0,1,1,
-   1,0,1, 1,0,1, 1,0,1, 1,0,1,
-   1,0,0, 1,0,0, 1,0,0, 1,0,0,
-   0,0,1, 0,0,1, 0,0,1, 0,0,1,
-   1,1,0, 1,1,0, 1,1,0, 1,1,0,
-   0,1,0, 0,1,0, 0,1,0, 0,1,0
-]);
-
-var cubeIndices =  new Float32Array([
-   0,1,2, 0,2,3,
-   4,5,6, 4,6,7,
-   8,9,10, 8,10,11,
-   12,13,14, 12,14,15,
-   16,17,18, 16,18,19,
-   20,21,22, 20,22,23
-]);
 
 //load the required resources using a utility function
 loadResources({
@@ -171,28 +138,6 @@ function createSceneGraph(gl, resources) {
   }
 
   {
-    let rain = new RainSGNode(300, floorSize);
-    shadowNode.append(rain);
-  }
-
-  {
-    //initialize light
-    lightNode = new LightSGNode(); //use now framework implementation of light node
-    lightNode.ambient = [0.2, 0.2, 0.2, 1];
-    lightNode.diffuse = [0.8, 0.8, 0.8, 1];
-    lightNode.specular = [1, 1, 1, 1];
-    lightNode.position = [0, 0, 0];
-
-    rotateLight = new TransformationSGNode(mat4.create());
-    translateLight = new TransformationSGNode(glm.transform({ translate: [10, 15, 5], rotateX: -90})); //translating the light is the same as setting the light position
-
-    rotateLight.append(translateLight);
-    translateLight.append(lightNode);
-    translateLight.append(createLightSphere()); //add sphere for debugging: since we use 0,0,0 as our light position the sphere is at the same position as the light source
-    shadowNode.append(rotateLight);
-  }
-
-  {
     let floor = new TransparentMaterialSGNode(new TextureSGNode(floorTexture, 0, new RenderSGNode(makeRectangle(floorSize, floorSize, floorCount, floorCount))));
     floor.ambient = [0, 0, 0, 1];
     floor.diffuse = [0.1, 0.1, 0.1, 1];
@@ -202,19 +147,7 @@ function createSceneGraph(gl, resources) {
     shadowNode.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset, 0], rotateX: -90, scale: 1}), [floor]));
   }
 
-  {
-    let windowNode = new TransparentMaterialSGNode(new TextureSGNode(windowTexture, 0, new RenderSGNode(makeWindow())));
-    windowNode.ambient = [0, 0, 0, 1];
-    windowNode.diffuse = [0.1, 0.1, 0.1, 1];
-    windowNode.specular = [1, 1, 1, 1];
-    windowNode.shininess = 10;
-    windowNode.alpha = 0.5;
 
-    let windowTransNode = new TransformationSGNode(glm.transform({ translate: [4.5, -0.1, -1], rotateZ:-90, scale: 1}), [windowNode]);
-
-    shadowNode.append(windowTransNode);
-    rootnofloor.append(windowTransNode);
-  }
 
   {
     let fence = new TransparentMaterialSGNode(new TextureSGNode(fenceTexture, 0, new RenderSGNode(makeRectangle(floorSize, fenceHeight, fenceCount, 1)), oldTexture, 1));
@@ -237,6 +170,12 @@ function createSceneGraph(gl, resources) {
     shadowNode.append(fenceNode4);
     rootnofloor.append(fenceNode4);
   }
+
+  {
+    let rain = new RainSGNode(10, floorSize);
+    shadowNode.append(rain);
+  }
+
 {
     let houseBody = new TransparentMaterialSGNode(new TextureSGNode(houseWallTexture, 0, new RenderSGNode(resources.housebody), mossTexture, 1));
     houseBody.ambient = [0, 0, 0, 1];
@@ -273,6 +212,20 @@ function createSceneGraph(gl, resources) {
   }
 
   {
+    let windowNode = new TransparentMaterialSGNode(new TextureSGNode(windowTexture, 0, new RenderSGNode(makeWindow())));
+    windowNode.ambient = [0, 0, 0, 1];
+    windowNode.diffuse = [0.1, 0.1, 0.1, 1];
+    windowNode.specular = [1, 1, 1, 1];
+    windowNode.shininess = 10;
+    windowNode.alpha = 0.5;
+
+    let windowTransNode = new TransformationSGNode(glm.transform({ translate: [4.5, -0.1, -1], rotateZ:-90, rotateY:180, scale: 1}), [windowNode]);
+
+    shadowNode.append(windowTransNode);
+  }
+
+  {
+
     let cylinderMaterial = new TransparentMaterialSGNode(new TextureSGNode(concreteTexture, 0, new RenderSGNode(createCylinder(15, 1, 0.5))));
     let cylinderNode = new TransformationSGNode(glm.transform({translate: [-3, floorOffset, 0], rotateX: -90, scale: [0.5, 0.5, 6]}), [cylinderMaterial]);
     shadowNode.append(cylinderNode);
@@ -339,6 +292,41 @@ function createSceneGraph(gl, resources) {
     let treeNode = new TransformationSGNode(glm.transform({translate: [-10, floorOffset+0.5, -3], scale: 0.2}), [tree]);
     shadowNode.append(treeNode);
     rootnofloor.append(treeNode);
+  }
+
+
+  {
+    //initialize light
+    lightNode = new LightSGNode();
+    lightNode.ambient = [0.2, 0.2, 0.2, 1];
+    lightNode.diffuse = [0.8, 0.8, 0.8, 1];
+    lightNode.specular = [1, 1, 1, 1];
+    lightNode.position = [0, 0, 0];
+
+    rotateLight = new TransformationSGNode(mat4.create());
+    translateLight = new TransformationSGNode(glm.transform({ translate: [15, 15, 5], rotateX: -90})); //translating the light is the same as setting the light position
+
+    //rotateLight.append(translateLight);
+    translateLight.append(lightNode);
+    translateLight.append(createLightSphere()); //add sphere for debugging: since we use 0,0,0 as our light position the sphere is at the same position as the light source
+    shadowNode.append(translateLight);
+  }
+
+  {
+    //initialize light
+    spotlightNode = new SpotlightSGNode(); //use now framework implementation of light node
+    spotlightNode.ambient = [0.1, 0.1, 0.1, 1];
+    spotlightNode.diffuse = [1, 1, 1, 1];
+    spotlightNode.specular = [1, 0, 0, 1];
+    spotlightNode.position = [-3, 4, 0];
+    spotlightNode.uniform = 'u_spotlight';
+    spotlightNode.direction = [1,-0.5,0];
+
+    translateSpotlight = new TransformationSGNode(glm.transform({ translate: [-3, 4, 0], rotateX: -90}));
+
+    translateSpotlight.append(spotlightNode);
+    translateSpotlight.append(createLightSphere());
+    shadowNode.append(translateSpotlight);
   }
 
 
@@ -434,12 +422,19 @@ function renderToTexture(timeInMilliseconds){
   //setup a projection matrix for the light camera which is large enough to capture our scene
   context.projectionMatrix = mat4.perspective(mat4.create(), glm.deg2rad(30), width / height, 2, floorSize*floorSize + floorSize);
   //compute the light's position in world space
-  let lightModelMatrix = mat4.multiply(mat4.create(), rotateLight.matrix, translateLight.matrix);
+  let lightModelMatrix = translateLight.matrix;
   let lightPositionVector = vec4.fromValues(lightNode.position[0], lightNode.position[1], lightNode.position[2], 1);
   let worldLightPos = vec4.transformMat4(vec4.create(), lightPositionVector, lightModelMatrix);
+
+  //compute the spotlight's position in world space
+  let spotlightModelMatrix = translateSpotlight.matrix;
+  let spotlightPositionVector = vec4.fromValues(spotlightNode.position[0], spotlightNode.position[1], spotlightNode.position[2], 1);
+  worldLightPos = vec4.add(vec4.create(), worldLightPos, vec4.transformMat4(vec4.create(), spotlightPositionVector, spotlightModelMatrix));
+
   //let the light "shine" towards the scene center (i.e. towards C3PO)
   let worldLightLookAtPos = [0,0,0];
   let upVector = [0,1,0];
+
   //TASK 1.1: setup camera to look at the scene from the light's perspective
   let lookAtMatrix = mat4.lookAt(mat4.create(), worldLightPos, worldLightLookAtPos, upVector);
   //let lookAtMatrix = mat4.lookAt(mat4.create(), [0,1,-10], [0,0,0], [0,1,0]); //replace me for TASK 1.1
@@ -473,10 +468,6 @@ function render(timeInMilliseconds) {
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
   gl.clearColor(0.435, 0.506, 0.635, 1.0); // sky blue color as background
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-  gl.enable(gl.DEPTH_TEST);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  gl.depthFunc(gl.LESS);
 
   //setup context and camera matrices
   const context = createSGContext(gl);
@@ -647,6 +638,14 @@ class TransparentMaterialSGNode extends MaterialSGNode{
   }
 
   render(context) {
+    if (this.alpha != 1){
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      gl.enable(gl.BLEND);
+      gl.disable(gl.DEPTH_TEST);
+    } else {
+      gl.disable(gl.BLEND);
+      gl.enable(gl.DEPTH_TEST);
+    }
     gl.uniform1f(gl.getUniformLocation(context.shader, this.uniform+'.alpha'), this.alpha);
     super.render(context);
   }
@@ -693,9 +692,39 @@ class RainSGNode extends SGNode {
     super.render(context);
   }
 
+
   getRandomInt(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min)) + min;
   }
+}
+
+  class SpotlightSGNode extends LightSGNode {
+
+    constructor(position, direction, children) {
+      super(position, children);
+      this.direction = direction;
+    }
+
+    setLightDirection(context){
+          const gl = context.gl;
+         if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Dir'))) {
+           return;
+         }
+         const direction = this.direction;
+         gl.uniform3f(gl.getUniformLocation(context.shader, this.uniform+'Dir'), direction[0], direction[1], direction[2]);
+    }
+
+    computeLightDirection(context){
+
+    }
+
+    render(context){
+      this.setLightDirection(context);
+      this.computeLightDirection(context);
+
+      super.render(context);
+    }
+
 }
