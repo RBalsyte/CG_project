@@ -136,7 +136,7 @@ Camera.prototype.autoMove = function(timeInMilliseconds, deltaTime) {
   else if (timeInMilliseconds < 30*1000){
     // observe no face staring
   }
-  else{
+  else {
     this.movie = false;
   }
 }

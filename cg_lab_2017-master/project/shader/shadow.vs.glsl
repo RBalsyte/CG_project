@@ -20,7 +20,7 @@ uniform mat4 u_eyeToLightMatrix;
 //output of this shader
 varying vec3 v_normalVec;
 varying vec3 v_lightVec;
-varying vec3 v_spotlightVec;
+varying vec4 v_spotlightVec;
 varying vec3 v_eyeVec;
 varying vec2 v_texCoord;
 varying vec4 v_shadowMapTexCoord;
@@ -43,11 +43,10 @@ void main() {
 
     float angle = acos(dot(vecLightToVertex,  normSpotlightDir));
 
-
     if(angle < u_spotlightAngle)
-      v_spotlightVec =  u_spotlightPos - eyePosition.xyz;
+      v_spotlightVec =  vec4(u_spotlightPos - eyePosition.xyz, 1.0);
     else
-      v_spotlightVec =  vec3(0,0,0);
+      v_spotlightVec =  vec4(0,0,0,0.0);
 
     //calculate vertex position in light clip space coordinates using u_eyeToLightMatrix (assign result to v_shadowMapTexCoord)
     v_shadowMapTexCoord = u_eyeToLightMatrix*eyePosition;

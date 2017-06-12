@@ -31,7 +31,7 @@ varying vec3 v_lightVec;
 
 // Spotlight uniform
 uniform Spiritlight u_spotlight;
-varying vec3 v_spotlightVec;
+varying vec4 v_spotlightVec;
 
 
 //texture related variables
@@ -129,8 +129,14 @@ void main (void) {
       textureColor = v_color;
     }
 
-    gl_FragColor = calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor);
 
-    if(v_spotlightVec.x != 0.0 && v_spotlightVec.y != 0.0 && v_spotlightVec.z != 0.0)
-        gl_FragColor = gl_FragColor + calculateSimplePointLight(u_spotlight, u_material, v_spotlightVec, v_normalVec, v_eyeVec, textureColor);
+    vec4 pointLight = calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor);
+    if(v_spotlightVec.w < 1.0)
+      gl_FragColor = pointLight;
+    else {
+      vec4 directLight = calculateSimplePointLight(u_spotlight, u_material, v_spotlightVec.xyz, v_normalVec, v_eyeVec, textureColor);
+      gl_FragColor = pointLight+ directLight;
+    }
+
+
 }

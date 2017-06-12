@@ -123,12 +123,12 @@ function createSceneGraph(gl, resources) {
     //initialize light
     lightNode = new LightSGNode();
     lightNode.ambient = [0.2, 0.2, 0.2, 1];
-    lightNode.diffuse = [0.8, 0.8, 0.8, 1];
+    lightNode.diffuse = [1, 0.8, 0.8, 1];
     lightNode.specular = [1, 1, 1, 1];
-    lightNode.position = [0, 0, 0];
+    lightNode.position = [15, 20, 5];
 
     rotateLight = new TransformationSGNode(mat4.create());
-    translateLight = new TransformationSGNode(glm.transform({ translate: [15, 15, 5], rotateX: -90})); //translating the light is the same as setting the light position
+    translateLight = new TransformationSGNode(glm.transform({ translate: [15, 20, 5], rotateX: -90})); //translating the light is the same as setting the light position
 
     //rotateLight.append(translateLight);
     translateLight.append(lightNode);
@@ -140,14 +140,14 @@ function createSceneGraph(gl, resources) {
     //initialize light
     spotlightNode = new SpiritlightSGNode(); //use now framework implementation of light node
     spotlightNode.ambient = [0.1, 0.1, 0.1, 1];
-    spotlightNode.diffuse = [1, 1, 1, 1];
+    spotlightNode.diffuse = [1, 0.8, 0.8, 1];
     spotlightNode.specular = [1, 0, 0, 1];
     spotlightNode.position = [-3, 4, 0];
     spotlightNode.uniform = 'u_spotlight';
-    spotlightNode.direction = [1,-0.5,0];
-    spotlightNode.angle = 15.0;
+    spotlightNode.direction = [0,0,0];
+    spotlightNode.angle = 50.0;
 
-    translateSpotlight = new TransformationSGNode(glm.transform({ translate: [-3, 4, 0], rotateX: -90}));
+    translateSpotlight = new TransformationSGNode(glm.transform({ translate: [-3, 4, 0]}));
 
     translateSpotlight.append(spotlightNode);
     translateSpotlight.append(createLightSphere());
@@ -281,16 +281,16 @@ function createSceneGraph(gl, resources) {
   }
 
   {
+    spirits = new SpiritsSGNode(10);
+    shadowNode.append(spirits);
+    rootnofloor.append(spirits);
+  }
+
+  {
     let cylinderMaterial = new TransparentMaterialSGNode(new TextureSGNode(concreteTexture, 0, new RenderSGNode(createCylinder(15, 1, 0.5))));
     let cylinderNode = new TransformationSGNode(glm.transform({translate: [-3, floorOffset, 0], rotateX: -90, scale: [0.5, 0.5, 6]}), [cylinderMaterial]);
     shadowNode.append(cylinderNode);
     rootnofloor.append(cylinderNode);
-  }
-
-  {
-    spirits = new SpiritsSGNode(10);
-    shadowNode.append(spirits);
-    rootnofloor.append(spirits);
   }
 
   {
@@ -419,7 +419,7 @@ function renderToTexture(timeInMilliseconds){
   //setup a projection matrix for the light camera which is large enough to capture our scene
   context.projectionMatrix = mat4.perspective(mat4.create(), glm.deg2rad(30), width / height, 2, floorSize*floorSize + floorSize);
   //compute the light's position in world space
-  let lightModelMatrix = mat4.multiply(mat4.create(), rotateLight.matrix, translateLight.matrix);
+  let lightModelMatrix = translateLight.matrix;
   let lightPositionVector = vec4.fromValues(lightNode.position[0], lightNode.position[1], lightNode.position[2], 1);
   let worldLightPos = vec4.transformMat4(vec4.create(), lightPositionVector, lightModelMatrix);
 
@@ -926,7 +926,7 @@ class SpiritsSGNode extends SGNode {
   }
 
   makeSpiritLimb(x, y, z, length){
-    var limb = new TransparentMaterialSGNode([new RenderSGNode(createCylinder(15, 1, 0.2))]);
+    var limb = new RenderSGNode(createCylinder(15, 1, 0.2));
     return new TransformationSGNode(glm.transform({translate: [x, y, z], rotateX: 90, scale: [0.06, 0.1, length]}), [limb]);
   }
 
@@ -962,41 +962,18 @@ function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
 }
 
-class SpiritlightSGNode extends TransformationSGNode {
+class SpiritlightSGNode extends LightSGNode {
 
   constructor(position, direction, angle, children) {
-    super(null, children);
-    this.position = position || [0, 0, 0];
+    super(position, children);
     this.direction = direction || [0, 0, 0];
-    this.ambient = [0, 0, 0, 1];
-    this.diffuse = [1, 1, 1, 1];
-    this.specular = [1, 1, 1, 1];
     this.angle = 90;
-    //uniform name
-    this.uniform = 'u_light';
 
-    this._worldPosition = null;
     this._worldDirection = null;
   }
 
-  setLightUniforms(context) {
+  setLightDirection(context) {
     const gl = context.gl;
-    if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'.ambient'))) {
-      return;
-    }
-    gl.uniform4fv(gl.getUniformLocation(context.shader, this.uniform+'.ambient'), this.ambient);
-    gl.uniform4fv(gl.getUniformLocation(context.shader, this.uniform+'.diffuse'), this.diffuse);
-    gl.uniform4fv(gl.getUniformLocation(context.shader, this.uniform+'.specular'), this.specular);
-  }
-
-  setLightPosition(context) {
-    const gl = context.gl;
-    if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Pos'))) {
-      return;
-    }
-    const position = this._worldPosition || this.position;
-    gl.uniform3f(gl.getUniformLocation(context.shader, this.uniform+'Pos'), position[0], position[1], position[2]);
-
     if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Dir'))) {
       return;
     }
@@ -1009,30 +986,18 @@ class SpiritlightSGNode extends TransformationSGNode {
     gl.uniform1f(gl.getUniformLocation(context.shader, this.uniform+'Angle'), glm.deg2rad(this.angle));
   }
 
-  computeLightPosition(context) {
+  computeLightDirection(context) {
     const modelViewMatrix = mat4.multiply(mat4.create(), context.viewMatrix, context.sceneMatrix);
-    const original = this.position;
-    const position =  vec4.transformMat4(vec4.create(), vec4.fromValues(original[0], original[1],original[2], 1), modelViewMatrix);
-
-    this._worldPosition = position;
-
     const odir = this.direction;
     const direction = vec4.transformMat4(vec4.create(), vec4.fromValues(odir[0], odir[1], odir[2], 1), modelViewMatrix);
 
     this._worldDirection = direction;
   }
 
-  setLight(context) {
-    this.setLightPosition(context);
-    this.setLightUniforms(context);
-  }
-
   render(context) {
-    this.computeLightPosition(context);
-    this.setLight(context);
+    this.setLightDirection(context);
+    this.computeLightDirection(context);
 
-    //since this a transformation node update the matrix according to my position
-    this.matrix = glm.translate(this.position[0], this.position[1], this.position[2]);
     //render children
     super.render(context);
   }
