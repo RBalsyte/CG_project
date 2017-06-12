@@ -13,7 +13,7 @@ const windowSize = 1;
 const windowHeight = 1.3;
 const windowCount = 5;
 const floorOffset = -2;
-const movementSpeed = 0.005;
+const movementSpeed = 0.002;
 const mouseSpeed = 0.0001;
 
 var gl = null;
@@ -138,13 +138,14 @@ function createSceneGraph(gl, resources) {
 
   {
     //initialize light
-    spotlightNode = new SpotlightSGNode(); //use now framework implementation of light node
+    spotlightNode = new SpiritlightSGNode(); //use now framework implementation of light node
     spotlightNode.ambient = [0.1, 0.1, 0.1, 1];
     spotlightNode.diffuse = [1, 1, 1, 1];
     spotlightNode.specular = [1, 0, 0, 1];
     spotlightNode.position = [-3, 4, 0];
     spotlightNode.uniform = 'u_spotlight';
     spotlightNode.direction = [1,-0.5,0];
+    spotlightNode.angle = 15.0;
 
     translateSpotlight = new TransformationSGNode(glm.transform({ translate: [-3, 4, 0], rotateX: -90}));
 
@@ -421,11 +422,6 @@ function renderToTexture(timeInMilliseconds){
   let lightModelMatrix = mat4.multiply(mat4.create(), rotateLight.matrix, translateLight.matrix);
   let lightPositionVector = vec4.fromValues(lightNode.position[0], lightNode.position[1], lightNode.position[2], 1);
   let worldLightPos = vec4.transformMat4(vec4.create(), lightPositionVector, lightModelMatrix);
-
-  //compute the spotlight's position in world space
-  let spotlightModelMatrix = translateSpotlight.matrix;
-  let spotlightPositionVector = vec4.fromValues(spotlightNode.position[0], spotlightNode.position[1], spotlightNode.position[2], 1);
-  worldLightPos = vec4.add(vec4.create(), worldLightPos, vec4.transformMat4(vec4.create(), spotlightPositionVector, spotlightModelMatrix));
 
   //let the light "shine" towards the scene center (i.e. towards C3PO)
   let worldLightLookAtPos = [0,0,0];
@@ -887,34 +883,6 @@ class RainSGNode extends SGNode {
   }
 }
 
-class SpotlightSGNode extends LightSGNode {
-
-  constructor(position, direction, children) {
-    super(position, children);
-    this.direction = direction;
-  }
-
-  setLightDirection(context){
-    const gl = context.gl;
-    if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Dir'))) {
-      return;
-    }
-    const direction = this.direction;
-    gl.uniform3f(gl.getUniformLocation(context.shader, this.uniform+'Dir'), direction[0], direction[1], direction[2]);
-  }
-
-  computeLightDirection(context){
-
-  }
-
-  render(context){
-    this.setLightDirection(context);
-    this.computeLightDirection(context);
-
-    super.render(context);
-  }
-}
-
 class SpiritsSGNode extends SGNode {
 
   constructor(spiritCount, children) {
@@ -992,4 +960,80 @@ function getRandomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min)) + min;
+}
+
+class SpiritlightSGNode extends TransformationSGNode {
+
+  constructor(position, direction, angle, children) {
+    super(null, children);
+    this.position = position || [0, 0, 0];
+    this.direction = direction || [0, 0, 0];
+    this.ambient = [0, 0, 0, 1];
+    this.diffuse = [1, 1, 1, 1];
+    this.specular = [1, 1, 1, 1];
+    this.angle = 90;
+    //uniform name
+    this.uniform = 'u_light';
+
+    this._worldPosition = null;
+    this._worldDirection = null;
+  }
+
+  setLightUniforms(context) {
+    const gl = context.gl;
+    if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'.ambient'))) {
+      return;
+    }
+    gl.uniform4fv(gl.getUniformLocation(context.shader, this.uniform+'.ambient'), this.ambient);
+    gl.uniform4fv(gl.getUniformLocation(context.shader, this.uniform+'.diffuse'), this.diffuse);
+    gl.uniform4fv(gl.getUniformLocation(context.shader, this.uniform+'.specular'), this.specular);
+  }
+
+  setLightPosition(context) {
+    const gl = context.gl;
+    if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Pos'))) {
+      return;
+    }
+    const position = this._worldPosition || this.position;
+    gl.uniform3f(gl.getUniformLocation(context.shader, this.uniform+'Pos'), position[0], position[1], position[2]);
+
+    if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Dir'))) {
+      return;
+    }
+    const direction = this._worldDirection || this.direction;
+    gl.uniform3f(gl.getUniformLocation(context.shader, this.uniform+'Dir'), direction[0], direction[1], direction[2]);
+    if(!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Angle'))) {
+      return;
+    }
+
+    gl.uniform1f(gl.getUniformLocation(context.shader, this.uniform+'Angle'), glm.deg2rad(this.angle));
+  }
+
+  computeLightPosition(context) {
+    const modelViewMatrix = mat4.multiply(mat4.create(), context.viewMatrix, context.sceneMatrix);
+    const original = this.position;
+    const position =  vec4.transformMat4(vec4.create(), vec4.fromValues(original[0], original[1],original[2], 1), modelViewMatrix);
+
+    this._worldPosition = position;
+
+    const odir = this.direction;
+    const direction = vec4.transformMat4(vec4.create(), vec4.fromValues(odir[0], odir[1], odir[2], 1), modelViewMatrix);
+
+    this._worldDirection = direction;
+  }
+
+  setLight(context) {
+    this.setLightPosition(context);
+    this.setLightUniforms(context);
+  }
+
+  render(context) {
+    this.computeLightPosition(context);
+    this.setLight(context);
+
+    //since this a transformation node update the matrix according to my position
+    this.matrix = glm.translate(this.position[0], this.position[1], this.position[2]);
+    //render children
+    super.render(context);
+  }
 }
