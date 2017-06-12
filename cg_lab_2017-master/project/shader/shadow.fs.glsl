@@ -15,6 +15,8 @@ struct Material {
 * definition of the light properties related to material properties
 */
 struct Spiritlight {
+    vec3 direction;
+
     vec4 ambient;
     vec4 diffuse;
     vec4 specular;
@@ -127,6 +129,8 @@ void main (void) {
       textureColor = v_color;
     }
 
-    gl_FragColor = calculateSimplePointLight(u_spotlight, u_material, v_spotlightVec, v_normalVec, v_eyeVec, textureColor) +
-    calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor);
+    gl_FragColor = calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor);
+
+    if(v_spotlightVec.x != 0.0 && v_spotlightVec.y != 0.0 && v_spotlightVec.z != 0.0)
+        gl_FragColor = gl_FragColor + calculateSimplePointLight(u_spotlight, u_material, v_spotlightVec, v_normalVec, v_eyeVec, textureColor);
 }

@@ -153,25 +153,21 @@ function createSceneGraph(gl, resources) {
   {
     //initialize light
     spotlightNode = new SpiritlightSGNode(); //use now framework implementation of light node
-    spotlightNode.ambient = [0.1, 0.1, 0.1, 1];
-    spotlightNode.diffuse = [0.2, 0,0, 1];
-    spotlightNode.specular = [1, 1, 0, 1];
-    spotlightNode.position = [-20, 2, 10];
+    spotlightNode.ambient = [0.3, 0.3, 0.3, 1];
+    spotlightNode.diffuse = [0.3, 0.3,0.3, 1];
+    spotlightNode.specular = [0, 1, 0, 1];
+    spotlightNode.position = [-30, floorOffset+1, 20];
     spotlightNode.uniform = 'u_spotlight';
-    spotlightNode.direction = [-1, 0, 0];
+    spotlightNode.direction = [1, 0, 0];
 
     translateSpotlight = new TransformationSGNode(glm.transform({
-      translate: [-20, 2, 10],
-      rotateX: -90
+      translate: [-30, floorOffset+1, 20]
     }));
 
     translateSpotlight.append(spotlightNode);
     translateSpotlight.append(createLightSphere());
     shadowNode.append(translateSpotlight);
   }
-
-
-
 
   {
     let floor = new MaterialSGNode(new TextureSGNode(floorTexture, 0, new RenderSGNode(makeRectangle(floorSize, floorSize, floorCount, floorCount))));
@@ -237,7 +233,7 @@ function createSceneGraph(gl, resources) {
     window2.shininess = 10;
 
     let windowNode2 = new TransformationSGNode(glm.transform({
-      translate: [12.8, 0.3, 4.4],
+      translate: [13, 0.3, 4.4],
       rotateY: -90,
       scale: 1
     }), [window2]);
@@ -485,16 +481,11 @@ function renderToTexture(timeInMilliseconds) {
   const context = createSGContext(gl);
   //setup a projection matrix for the light camera which is large enough to capture our scene
   context.projectionMatrix = mat4.perspective(mat4.create(), glm.deg2rad(30), width / height, 2, floorSize * floorSize + floorSize);
-  //compute the light's position in world space
 
+  //compute the light's position in world space
   let lightModelMatrix = translateLight.matrix;
   let lightPositionVector = vec4.fromValues(lightNode.position[0], lightNode.position[1], lightNode.position[2], 1);
   let worldLightPos = vec4.transformMat4(vec4.create(), lightPositionVector, lightModelMatrix);
-
-  //compute the spotlight's position in world space
-  // let spotlightModelMatrix = translateSpotlight.matrix;
-  // let spotlightPositionVector = vec4.fromValues(spotlightNode.position[0], spotlightNode.position[1], spotlightNode.position[2], 1);
-  // worldLightPos = vec4.add(vec4.create(), worldLightPos, vec4.transformMat4(vec4.create(), spotlightPositionVector, spotlightModelMatrix));
 
   //let the light "shine" towards the scene center (i.e. towards C3PO)
   let worldLightLookAtPos = [0, 0, 0];
@@ -965,7 +956,7 @@ class SpiritlightSGNode extends TransformationSGNode {
     this.ambient = [0, 0, 0, 1];
     this.diffuse = [1, 1, 1, 1];
     this.specular = [1, 1, 1, 1];
-    this.angle = 45;
+    this.angle = 90;
     //uniform name
     this.uniform = 'u_light';
 

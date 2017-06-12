@@ -43,7 +43,8 @@ void main() {
 
     float angle = acos(dot(vecLightToVertex,  normSpotlightDir));
 
-    if(u_spotlightAngle <= 90.0)
+
+    if(angle <= 90.0)
       v_spotlightVec =  u_spotlightPos - eyePosition.xyz;
     else
       v_spotlightVec =  vec3(0,0,0);
