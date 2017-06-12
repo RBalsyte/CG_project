@@ -1,9 +1,11 @@
 /**
 * @requires: camera.js
+*
+*https://free3d.com/3d-model/old-chair-51635.html
 */
 'use strict';
 
-const floorSize = 40;
+const floorSize = 20;
 const floorCount = 20;
 const fenceHeight = 1;
 const fenceCount = 10;
@@ -12,10 +14,7 @@ const windowHeight = 1.3;
 const windowCount = 5;
 
 const movementSpeed = 0.005;
-const mouseSpeed = 0.00002;
-
-const maxMoveSpiritX = 32;
-
+const mouseSpeed = 0.0001;
 const floorOffset = -2;
 
 var gl = null;
@@ -25,7 +24,6 @@ var width = 600;
 var height = 600;
 
 var animatedAngle = 0;
-var moveSpiritX = 0;
 var moveSpiritDown = true;
 
 var camera;
@@ -33,13 +31,11 @@ var camera;
 var root = null;
 var rootnofloor = null;
 var shadowNode;
-var rotateSpirit;
+var spirits;
 var translateLight;
 var rotateLight;
 var lightNode;
-var moveSpiritNode;
-var moveSpiritHandNode;
-var noFaceNode;
+var nofaceNode;
 var spotlightNode;
 var translateSpotlight;
 
@@ -50,6 +46,8 @@ var floorTexture;
 var fenceTexture;
 var concreteTexture;
 var oldTexture;
+var crackTexture;
+var dirtTexture;
 var houseFloorTexture;
 var windowTexture;
 
@@ -69,11 +67,15 @@ loadResources({
   windowtexture: 'models/window.jpg',
   tree_model_01: 'models/tree01.obj',
   oldtexture: 'models/paint.jpg',
+  cracktexture: 'models/crack.jpg',
+  dirttexture: 'models/colors.jpg',
   housefloortexture: 'models/tatami.jpg',
   housebody: 'models/houseBody.obj',
   houseroof: 'models/houseRoof.obj',
   noface: 'models/noFace.obj',
-  nofacemask: 'models/mask.obj'
+  nofacemask: 'models/mask.obj',
+  chair: 'models/chair.obj',
+  table: 'models/table.obj'
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
   render(0);
@@ -89,7 +91,7 @@ function init(resources) {
 
   gl.enable(gl.DEPTH_TEST);
   root = createSceneGraph(gl, resources);
-  camera = new Camera(root, gl.canvas, movementSpeed, mouseSpeed);
+  camera = new Camera(root, gl.canvas, movementSpeed, mouseSpeed, nofaceNode);
 }
 
 function createSceneGraph(gl, resources) {
@@ -108,11 +110,6 @@ function createSceneGraph(gl, resources) {
     //adapt texture coordinates
     rectangle.texture = [0, 0, textureRepeatCountHorizontally, 0, textureRepeatCountHorizontally, textureRepeatCountVertically, 0, textureRepeatCountVertically];
     return rectangle;
-  }
-
-  function makeSpiritLimb(x, y, z, length){
-    var limb = new MaterialSGNode([new RenderSGNode(createCylinder(15, 1, 0.2))]);
-    return new TransformationSGNode(glm.transform({translate: [x, y, z], rotateX: 90, scale: [0.06, 0.1, length]}), [limb]);
   }
 
   {
@@ -160,9 +157,8 @@ function createSceneGraph(gl, resources) {
     shadowNode.append(translateSpotlight);
   }
 
-
   {
-    let floor = new MaterialSGNode(new TextureSGNode(floorTexture, 0, new RenderSGNode(makeRectangle(floorSize, floorSize, floorCount, floorCount))));
+    let floor = new TransparentMaterialSGNode(new TextureSGNode(floorTexture, 0, new RenderSGNode(makeRectangle(floorSize, floorSize, floorCount, floorCount))));
     floor.ambient = [0, 0, 0, 1];
     floor.diffuse = [0.1, 0.1, 0.1, 1];
     floor.specular = [0.5, 0.5, 0.5, 1];
@@ -172,7 +168,7 @@ function createSceneGraph(gl, resources) {
   }
 
   {
-    let fence = new MaterialSGNode(new TextureSGNode(fenceTexture, 0, new RenderSGNode(makeRectangle(floorSize, fenceHeight, fenceCount, 1)), oldTexture, 1));
+    let fence = new TransparentMaterialSGNode(new TextureSGNode(fenceTexture, 0, new RenderSGNode(makeRectangle(floorSize, fenceHeight, fenceCount, 1)), oldTexture, 1));
     fence.ambient = [0, 0, 0, 1];
     fence.diffuse = [0.1, 0.1, 0.1, 1];
     fence.specular = [0.5, 0.5, 0.5, 1];
@@ -199,19 +195,7 @@ function createSceneGraph(gl, resources) {
   }
 
   {
-    let window2 = new MaterialSGNode(new TestSGNode(2.3, 1, 0.2));
-    window2.ambient = [0, 0, 0, 1];
-    window2.diffuse = [0.1, 0.1, 0.1, 1];
-    window2.specular = [1, 1, 1, 1];
-    window2.shininess = 10;
-
-    let windowNode2 = new TransformationSGNode(glm.transform({ translate: [12.8, 0.3, 4.4], rotateY: -90, scale: 1}), [window2]);
-    shadowNode.append(windowNode2);
-    rootnofloor.append(windowNode2);
-  }
-
-  {
-    let houseRoof = new MaterialSGNode([new RenderSGNode(resources.houseroof)]);
+    let houseRoof = new TransparentMaterialSGNode([new RenderSGNode(resources.houseroof)]);
     houseRoof.ambient = [0, 0, 0, 1];
     houseRoof.diffuse = [0.1, 0.1, 0.1, 1];
     houseRoof.specular = [0.5, 0.5, 0.5, 1];
@@ -220,29 +204,6 @@ function createSceneGraph(gl, resources) {
     let houseRoofNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset - 0.3, 9], scale: [0.5,0.5,1]}), [houseRoof]);
     shadowNode.append(houseRoofNode);
     rootnofloor.append(houseRoofNode);
-  }
-
-  {
-    let houseBody = new MaterialSGNode([new RenderSGNode(resources.housebody)]);
-    houseBody.ambient = [0.9, 0, 0, 0.5];
-    houseBody.diffuse = [0.9, 0, 0, 0.5];
-    houseBody.specular = [0.5, 0.5, 0.5, 1];
-    houseBody.shininess = 100;
-
-    let houseBodyNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset-0.5, 9], rotateY: 180, scale: [0.5,0.5,1]}), [houseBody]);
-    shadowNode.append(houseBodyNode);
-    rootnofloor.append(houseBodyNode);
-  }
-
-  {
-    let houseFloor = new MaterialSGNode(new TextureSGNode(houseFloorTexture, 0, new RenderSGNode(makeRectangle(10, 10, 20, 20))));
-    houseFloor.ambient = [0, 0, 0, 1];
-    houseFloor.diffuse = [0.1, 0.1, 0.1, 1];
-    houseFloor.specular = [0.5, 0.5, 0.5, 1];
-    houseFloor.shininess = 50.0;
-
-    let houseFloorNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset + 0.05, 9], rotateX: -90, scale: [0.5,1,1]}), [houseFloor]);
-    shadowNode.append(houseFloorNode);
   }
 
   {
@@ -258,65 +219,108 @@ function createSceneGraph(gl, resources) {
     rootnofloor.append(windowNode);
   }
 
+
   {
-    let cylinderMaterial = new MaterialSGNode(new TextureSGNode(concreteTexture, 0, new RenderSGNode(createCylinder(15, 1, 0.5))));
+    let window2 = new TransparentMaterialSGNode(new WindowSGNode(2.3, 1, 0.2));
+    window2.ambient = [0, 0, 0, 1];
+    window2.diffuse = [0.1, 0.1, 0.1, 1];
+    window2.specular = [1, 1, 1, 1];
+    window2.shininess = 10;
+
+    let windowNode2 = new TransformationSGNode(glm.transform({ translate: [12.8, 0.3, 4.4], rotateY: -90, scale: 1}), [window2]);
+    shadowNode.append(windowNode2);
+    rootnofloor.append(windowNode2);
+  }
+
+  {
+    let houseBody = new TransparentMaterialSGNode([new RenderSGNode(resources.housebody)]);
+    houseBody.ambient = [0.9, 0, 0, 0.5];
+    houseBody.diffuse = [0.9, 0, 0, 0.5];
+    houseBody.specular = [0.5, 0.5, 0.5, 1];
+    houseBody.shininess = 100;
+
+    let houseBodyNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset-0.5, 9], rotateY: 180, scale: [0.5,0.5,1]}), [houseBody]);
+    shadowNode.append(houseBodyNode);
+    rootnofloor.append(houseBodyNode);
+  }
+
+  {
+    let houseFloor = new TransparentMaterialSGNode(new TextureSGNode(houseFloorTexture, 0, new RenderSGNode(makeRectangle(10, 10, 10, 10)), dirtTexture, 1, crackTexture, 2));
+    houseFloor.ambient = [0, 0, 0, 1];
+    houseFloor.diffuse = [0.1, 0.1, 0.1, 1];
+    houseFloor.specular = [0.5, 0.5, 0.5, 1];
+    houseFloor.shininess = 50.0;
+
+    let houseFloorNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset + 0.05, 9], rotateX: -90, scale: [0.5,1,1]}), [houseFloor]);
+    shadowNode.append(houseFloorNode);
+  }
+
+  {
+    let chair = new TransparentMaterialSGNode([new RenderSGNode(resources.chair)]);
+    chair.ambient = [0.5, 0.2, 0.1, 1];
+    chair.diffuse = [0.1, 0.1, 0.1, 1];
+    chair.specular = [1, 1, 1, 1];
+    chair.shininess = 10;
+
+    let chairNode1 = new TransformationSGNode(glm.transform({ translate: [5.5, floorOffset + 1, 12], rotateY:90, scale: 0.1}), [chair]);
+    shadowNode.append(chairNode1);
+    rootnofloor.append(chairNode1);
+
+    let chairNode2 = new TransformationSGNode(glm.transform({ translate: [9.5, floorOffset + 1, 12], rotateY:-90, scale: 0.1}), [Object.create(chair)]);
+    shadowNode.append(chairNode2);
+    rootnofloor.append(chairNode2);
+  }
+
+  {
+    let table = new TransparentMaterialSGNode([new RenderSGNode(resources.table)]);
+    table.ambient = [0.5, 0.2, 0.1, 1];
+    table.diffuse = [0.1, 0.1, 0.1, 1];
+    table.specular = [1, 1, 1, 1];
+    table.shininess = 10;
+
+    let tableNode = new TransformationSGNode(glm.transform({ translate: [7.5, floorOffset + 0.2, 12], rotateY:90, scale: 0.05}), [table]);
+    shadowNode.append(tableNode);
+    rootnofloor.append(tableNode);
+  }
+
+  {
+    let cylinderMaterial = new TransparentMaterialSGNode(new TextureSGNode(concreteTexture, 0, new RenderSGNode(createCylinder(15, 1, 0.5))));
     let cylinderNode = new TransformationSGNode(glm.transform({translate: [-3, floorOffset, 0], rotateX: -90, scale: [0.5, 0.5, 6]}), [cylinderMaterial]);
     shadowNode.append(cylinderNode);
     rootnofloor.append(cylinderNode);
   }
 
   {
-    moveSpiritNode = new TransformationSGNode(mat4.create());
-    moveSpiritHandNode = new TransformationSGNode(mat4.create());
-    moveSpiritNode.append(moveSpiritHandNode);
-
-    // add Body node as a sphere by creating a Sphere
-    let spiritBodyNode = new MaterialSGNode([new RenderSGNode(makeSphere(0.2, 10, 10))]);
-    spiritBodyNode.ambient = [0, 0, 0, 1];
-    spiritBodyNode.diffuse = [0, 0, 0, 1];
-    spiritBodyNode.specular = [0.5, 0.5, 0.5, 1];
-    spiritBodyNode.shininess = 10000;
-    moveSpiritNode.append(spiritBodyNode);
-
-    //left leg
-    moveSpiritNode.append(makeSpiritLimb(-0.1, 0, 0, 0.6));
-    //right Leg
-    moveSpiritNode.append(makeSpiritLimb(0.1, 0, 0, 0.6));
-    // left upper arm
-    moveSpiritHandNode.append(makeSpiritLimb(0.16, 0, 0, 0.4));
-    // right upper arm
-    moveSpiritHandNode.append(makeSpiritLimb(-0.16, 0, 0, 0.4));
-
-    shadowNode.append(moveSpiritNode);
-    rootnofloor.append(moveSpiritNode);
+    spirits = new SpiritsSGNode(10);
+    shadowNode.append(spirits);
+    rootnofloor.append(spirits);
   }
 
   {
-    let noface = new MaterialSGNode([new RenderSGNode(resources.noface)]);
+    let noface = new TransparentMaterialSGNode([new RenderSGNode(resources.noface)]);
     noface.ambient = [0, 0, 0, 1];
     noface.diffuse = [0.1, 0.1, 0.1, 1];
     noface.specular = [0, 0, 0, 1];
     noface.emission = [0, 0, 0, 1];
     noface.shininess = 0.0;
-    let nofaceNode = new TransformationSGNode(glm.transform({translate: [10, floorOffset + 2.5, -15], rotateZ : 125, scale: [1.5, 1.5, 1.5]}), [noface]);
-    shadowNode.append(nofaceNode);
-    rootnofloor.append(nofaceNode);
-  }
 
-  {
-    let mask = new MaterialSGNode([new RenderSGNode(resources.nofacemask)]);
+    let nofaceBodyNode = new TransformationSGNode(glm.transform({translate: [0, floorOffset + 2.5, 0], rotateY: 90, rotateZ : 125, scale: [1.5, 1.5, 1.5]}), [noface]);
+
+    let mask = new TransparentMaterialSGNode([new RenderSGNode(resources.nofacemask)]);
     mask.ambient = [1, 1, 1, 1];
     mask.diffuse = [0, 0, 0, 1];
     mask.specular = [0, 0, 0, 1];
     mask.emission = [0, 0, 0, 1];
     mask.shininess = 0;
-    let maskNode = new TransformationSGNode(glm.transform({translate: [9.75, floorOffset + 2.7, -15], rotateY: -90, scale: [0.2, 0.2, 0.2]}), [mask]);
-    shadowNode.append(maskNode);
-    rootnofloor.append(maskNode);
+    let maskNode = new TransformationSGNode(glm.transform({translate: [0, floorOffset + 2.7, 0.25], scale: [0.2, 0.2, 0.2]}), [mask]);
+
+    nofaceNode = new TransformationSGNode(glm.transform({translate: [16, 0, 8]}), [nofaceBodyNode, maskNode]);
+    shadowNode.append(nofaceNode);
+    rootnofloor.append(nofaceNode);
   }
 
   {
-    let tree = new MaterialSGNode([new RenderSGNode(resources.tree_model_01)]);
+    let tree = new TransparentMaterialSGNode([new RenderSGNode(resources.tree_model_01)]);
     tree.ambient = [0.24725, 0.3995, 0.745, 1];
     tree.diffuse = [0.75164, 0.60648, 0.22648, 1];
     tree.specular = [0.228281, 0.655802, 0.766065, 1];
@@ -342,6 +346,12 @@ function initTextures(resources){
 
   houseFloorTexture = gl.createTexture();
   initTexture(houseFloorTexture, resources.housefloortexture);
+
+  dirtTexture = gl.createTexture();
+  initTexture(dirtTexture, resources.dirttexture);
+
+  crackTexture = gl.createTexture();
+  initTexture(crackTexture, resources.cracktexture);
 
   concreteTexture = gl.createTexture();
   initTexture(concreteTexture, resources.concretetexture);
@@ -445,10 +455,7 @@ function render(timeInMilliseconds) {
 
   //update animations
   rotateLight.matrix = glm.rotateY(timeInMilliseconds*0.05);
-
-  moveSpiritHandNode.matrix = glm.rotateZ(Math.cos(timeInMilliseconds / 2 * 0.01) * 25);
-  moveSpiritX=Math.abs((timeInMilliseconds*0.005)%(maxMoveSpiritX+0.0001) -maxMoveSpiritX/2) + maxMoveSpiritX/2;
-  moveSpiritNode.matrix = glm.translate(moveSpiritX - 28, Math.abs(Math.cos(timeInMilliseconds/2 * 0.01)) + floorOffset + 0.6, -10);
+  spirits.moveSpirits(timeInMilliseconds);
 
   //draw scene for shadow map into texture
   renderToTexture(timeInMilliseconds);
@@ -513,12 +520,14 @@ class ShadowSGNode extends SGNode {
 
 //a scene graph node for setting texture parameters
 class TextureSGNode extends SGNode {
-  constructor(texture, textureunit, children, texture2, textureunit2 ) {
+  constructor(texture, textureunit, children, texture2, textureunit2, texture3, textureunit3) {
     super(children);
     this.texture = texture;
-    this.textureunit = textureunit;
     this.texture2 = texture2;
+    this.texture3 = texture3;
+    this.textureunit = textureunit;
     this.textureunit2 = textureunit2;
+    this.textureunit3 = textureunit3;
   }
 
   render(context) {
@@ -527,16 +536,33 @@ class TextureSGNode extends SGNode {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
 
-    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_tex2'), this.textureunit2);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this.texture2);
-
+    if (typeof this.texture2 !== 'undefined'){
+      gl.uniform1i(gl.getUniformLocation(context.shader, 'u_tex2'), this.textureunit2);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.texture2);
+    }
+    if (typeof this.texture3 !== 'undefined'){
+      gl.uniform1i(gl.getUniformLocation(context.shader, 'u_tex3'), this.textureunit3);
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, this.texture3);
+    }
     super.render(context);
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, null);
+    if (typeof this.texture !== 'undefined'){
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+
+    if (typeof this.texture2 !== 'undefined'){
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+    if (typeof this.texture3 !== 'undefined'){
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+
+
 
     gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableObjectTexture'), 0);
   }
@@ -619,7 +645,7 @@ function createCylinder(segments, length, radius) {
 
 }
 
-class TestSGNode extends SGNode{
+class WindowSGNode extends SGNode{
 
   constructor(windowWidth, windowHeight, frameThickness, children) {
     super(children);
@@ -707,9 +733,6 @@ class TestSGNode extends SGNode{
     }
 
     gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableColorLookup'), 1);
-    // gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-    // gl.enable(gl.BLEND);
-    // gl.disable(gl.DEPTH_TEST);
 
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
@@ -723,11 +746,11 @@ class TestSGNode extends SGNode{
       gl.disableVertexAttribArray(colorLoc);
     }
 
+    //render children
+    super.render(context);
     gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableColorLookup'), 0);
     gl.disable(gl.BLEND);
     gl.enable(gl.DEPTH_TEST);
-    //render children
-    super.render(context);
 
   }
 
@@ -808,21 +831,19 @@ class TransparentMaterialSGNode extends MaterialSGNode{
 
   constructor(children) {
     super(children);
-    this.color = [0, 0, 0, 1];
+    this.alpha = 1;
   }
 
   render(context) {
 
-    if (this.color[3] != 1){
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    if (this.alpha != 1){
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       gl.enable(gl.BLEND);
       gl.disable(gl.DEPTH_TEST);
-    } else {
-      gl.disable(gl.BLEND);
-      gl.enable(gl.DEPTH_TEST);
     }
-    gl.uniform4fv(gl.getUniformLocation(context.shader, 'v_color'), this.color);
+    gl.uniform1f(gl.getUniformLocation(context.shader, 'u_alpha'), this.alpha);
     super.render(context);
+
     gl.disable(gl.BLEND);
     gl.enable(gl.DEPTH_TEST);
   }
@@ -834,16 +855,16 @@ class RainSGNode extends SGNode {
     super(children);
     this.area = area;
     this.particleCount = particleCount;
-    this.rainSpeed = 0.1;
+    this.rainSpeed = 0.5;
     this.generateRainDrops();
   }
 
   generateRainDrops(){
     for(var i = 0; i <= this.particleCount; i++){
-      var rainSphere = new TransparentMaterialSGNode(new RenderSGNode(makeSphere(0.05, 10, 10)));
-      rainSphere.ambient = [0.4, 0.5, 0.4, 0.5];
+      var rainSphere = new TransparentMaterialSGNode(new RenderSGNode(makeSphere(0.02, 10, 10)));
+      rainSphere.ambient = [0, 0, 0.7, 0.5];
       rainSphere.alpha = 0.1;
-      var rainDrop = new TransformationSGNode(glm.translate(this.getRandomInt(this.area, -this.area), this.getRandomInt(10, -2), this.getRandomInt(this.area, -this.area)), [rainSphere]);
+      var rainDrop = new TransformationSGNode(glm.translate(getRandomInt(this.area, -this.area), getRandomInt(10, -2), getRandomInt(this.area, -this.area)), [rainSphere]);
       this.append(rainDrop);
     }
   }
@@ -857,9 +878,9 @@ class RainSGNode extends SGNode {
 
       //make "new" raindrop. Basically reuse the object and just start from another random location
       if (y < -2){
-        x = self.getRandomInt(self.area, -self.area);
+        x = getRandomInt(self.area, -self.area);
         y = 10;
-        z = self.getRandomInt(self.area, -self.area);
+        z = getRandomInt(self.area, -self.area);
       }
       y -= self.rainSpeed;
 
@@ -868,39 +889,111 @@ class RainSGNode extends SGNode {
 
     super.render(context);
   }
+}
 
-  getRandomInt(min, max) {
-    min = Math.ceil(min);
-    max = Math.floor(max);
-    return Math.floor(Math.random() * (max - min)) + min;
+class SpotlightSGNode extends LightSGNode {
+
+  constructor(position, direction, children) {
+    super(position, children);
+    this.direction = direction;
+  }
+
+  setLightDirection(context){
+    const gl = context.gl;
+    if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Dir'))) {
+      return;
+    }
+    const direction = this.direction;
+    gl.uniform3f(gl.getUniformLocation(context.shader, this.uniform+'Dir'), direction[0], direction[1], direction[2]);
+  }
+
+  computeLightDirection(context){
+
+  }
+
+  render(context){
+    this.setLightDirection(context);
+    this.computeLightDirection(context);
+
+    super.render(context);
   }
 }
 
-  class SpotlightSGNode extends LightSGNode {
+class SpiritsSGNode extends SGNode {
 
-    constructor(position, direction, children) {
-      super(position, children);
-      this.direction = direction;
+  constructor(spiritCount, children) {
+    super(children);
+    this.spiritCount = spiritCount;
+    this.maxMoveSpiritX = 32;
+    this.moveSpiritX = 0;
+    this.spirits = [];
+    this.spiritsPositions = [];
+    this.generateSpirits();
+  }
+
+  generateSpirits(){
+
+    for(var i = 0; i <= this.spiritCount; i++){
+
+      var spirit = new TransformationSGNode(mat4.create());
+      var moveSpiritHandNode = new TransformationSGNode(mat4.create());
+      spirit.append(moveSpiritHandNode);
+
+      // add Body node as a sphere by creating a Sphere
+      let spiritBodyNode = new TransparentMaterialSGNode([new RenderSGNode(makeSphere(0.2, 10, 10))]);
+      spiritBodyNode.ambient = [0, 0, 0, 1];
+      spiritBodyNode.diffuse = [0, 0, 0, 1];
+      spiritBodyNode.specular = [0.5, 0.5, 0.5, 1];
+      spiritBodyNode.shininess = 100;
+      spirit.append(spiritBodyNode);
+
+      //left leg
+      spirit.append(this.makeSpiritLimb(-0.1, 0, 0, 0.6));
+      //right Leg
+      spirit.append(this.makeSpiritLimb(0.1, 0, 0, 0.6));
+      // left upper arm
+      moveSpiritHandNode.append(this.makeSpiritLimb(0.16, 0, 0, 0.4));
+      // right upper arm
+      moveSpiritHandNode.append(this.makeSpiritLimb(-0.16, 0, 0, 0.4));
+
+      this.spirits.push(spirit);
+      this.spiritsPositions.push([getRandomInt(-10, -20), getRandomInt(10, 20), getRandomInt(0, 20), getRandomInt(0, 20), getRandomInt(-20, -10), getRandomInt(-20, -10)]);
     }
+  }
 
-    setLightDirection(context){
-          const gl = context.gl;
-         if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Dir'))) {
-           return;
-         }
-         const direction = this.direction;
-         gl.uniform3f(gl.getUniformLocation(context.shader, this.uniform+'Dir'), direction[0], direction[1], direction[2]);
+  makeSpiritLimb(x, y, z, length){
+    var limb = new TransparentMaterialSGNode([new RenderSGNode(createCylinder(15, 1, 0.2))]);
+    return new TransformationSGNode(glm.transform({translate: [x, y, z], rotateX: 90, scale: [0.06, 0.1, length]}), [limb]);
+  }
+
+  moveSpirits(timeInMilliseconds){
+    for (var i = 0; i < this.spirits.length; i++){
+      this.spirits[i].children[0].matrix = glm.rotateZ(Math.cos(timeInMilliseconds / 2 * 0.01) * 25);
+
+      var moveX = this.spiritsPositions[i][0];
+      var moveZ = this.spiritsPositions[i][1];
+      var maxMoveSpiritX = this.spiritsPositions[i][2];
+      var maxMoveSpiritZ = this.spiritsPositions[i][3];
+      var offsetX = this.spiritsPositions[i][4];
+      var offsetZ = this.spiritsPositions[i][5];
+
+      moveX = Math.abs((timeInMilliseconds*0.005) % (maxMoveSpiritX+0.001) - maxMoveSpiritX/2) + maxMoveSpiritX/2;
+      moveZ = Math.abs((timeInMilliseconds*0.005) % (maxMoveSpiritZ+0.001) - maxMoveSpiritZ/2) + maxMoveSpiritZ/2;
+      this.spirits[i].matrix = glm.translate(moveX + offsetX, Math.abs(Math.cos(timeInMilliseconds/2 * 0.01)) + -1.4, moveZ+ offsetZ);
+      this.spiritsPositions[i][0] = moveX;
+      this.spiritsPositions[i][1] = moveZ;
     }
+  }
 
-    computeLightDirection(context){
+  render(context) {
+    this.spirits.forEach(function (c) {
+      c.render(context);
+    });
+  }
+}
 
-    }
-
-    render(context){
-      this.setLightDirection(context);
-      this.computeLightDirection(context);
-
-      super.render(context);
-    }
-
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min)) + min;
 }
