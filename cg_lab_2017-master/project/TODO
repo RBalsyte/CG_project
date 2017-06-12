@@ -1,0 +1,15 @@
+# CG_project To Dos
+
+- Write documentation
+- Add more comments + clean up the code
+
+- Update Scenes (the rotation of the camera depends highly on how often the render() function is called. Everytime I get different results..)
+
+- Create Light 
+	- fixed one (Sun)
+	- Moving light in the house
+	- Light Pole outside the house
+	
+- Fix shading
+- Windows -> transparency fixing?
+- Adjust rain drop size, color and speed (partially done.. unless we have nothing else to do)
