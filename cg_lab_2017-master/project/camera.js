@@ -2,12 +2,13 @@
 *
 * http://www.opengl-tutorial.org/beginners-tutorials/tutorial-6-keyboard-and-mouse/
 */
-function Camera(scene, canvas, speed, mouseSpeed) {
+function Camera(scene, canvas, speed, mouseSpeed, nofaceNode) {
   this.scene = scene;
   this.canvas = canvas;
   this.speed = speed;
   this.mouseSpeed = mouseSpeed;
   this.movie = true;
+  this.nofaceNode = nofaceNode;
 
   this.previousTime = 0;
   this.PI_2 = Math.PI / 2;
@@ -31,9 +32,7 @@ function Camera(scene, canvas, speed, mouseSpeed) {
   }
 
   var onKeyDown = function(event){
-    if (!self.movie){
-      self.pressedKeys[event.code] = true;
-    }
+    self.pressedKeys[event.code] = true;
   }
 
   var onMouseWheel = function(event){
@@ -56,9 +55,22 @@ function Camera(scene, canvas, speed, mouseSpeed) {
   };
 }
 
+Camera.prototype.reset = function () {
+  this.pressedKeys = {};
+
+  this.position = vec3.create(0, 0, 5);
+  this.direction = vec3.create();
+  this.look = vec3.create(0, 0, 0);
+  this.up = vec3.create();
+
+  this.horizontalAngle = Math.PI;
+  this.verticalAngle = 0;
+  this.mouseWheelDelta = 0;
+}
+
 Camera.prototype.autoMove = function(timeInMilliseconds, deltaTime) {
 
-  // 3 seconds -> 3 seconds total
+  // 3 seconds
   if (timeInMilliseconds < 3*1000){
     mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed); // move forward
     this.verticalAngle -= this.mouseSpeed * 10; // adjust vertical angle, so the camera doesnt look upwards
@@ -91,35 +103,38 @@ Camera.prototype.autoMove = function(timeInMilliseconds, deltaTime) {
   else if (timeInMilliseconds < 17*1000){
       //pause to observe the spotlight
   }
-  // 1 seond
+  // 2 seonds
   else if (timeInMilliseconds < 19*1000){
     this.verticalAngle -= this.mouseSpeed * 30; // start looking downwards
-    this.horizontalAngle += this.mouseSpeed * 300; // rotate to the left
+    this.horizontalAngle += this.mouseSpeed * 180; // rotate to the left
     mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * (this.speed)); // move forward
   }
-  // // 2 seond -> 12 seconds total
-  // else if (timeInMilliseconds < 20*1000){
-  //   mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * (this.speed + 0.05)); // move forward
-  // }
+  // 1 seond
+  else if (timeInMilliseconds < 20*1000){
+    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed); // move forward
+  }
+  // 2 seconds
   else if (timeInMilliseconds < 22*1000){
     this.horizontalAngle -= this.mouseSpeed * 310; // rotate to the right
     mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed); // move forward
   }
-  else if (timeInMilliseconds < 23*1000){
+  // 3 second
+  else if (timeInMilliseconds < 25*1000){
     // pause to observe the inside of the hosue
   }
-  else if (timeInMilliseconds < 24*1000){
-    this.verticalAngle -= this.mouseSpeed * 60; // start looking downwards
-  }
-  else if (timeInMilliseconds < 25*1000){
-    // pause to observe the multitextured floor
-  }
+  // 1 second
   else if (timeInMilliseconds < 26*1000){
-    this.horizontalAngle += this.mouseSpeed * 420; // rotate to the left
-    this.verticalAngle += this.mouseSpeed * 65; // start looking upwards
+    this.horizontalAngle += this.mouseSpeed * 200; // rotate to the left
+  }
+  // 1 seconds
+  else if (timeInMilliseconds < 27*1000){
+    this.nofaceNode.matrix[14] = this.nofaceNode.matrix[14] - deltaTime*this.speed; // move no face along z axis
+  }
+  else if (timeInMilliseconds < 28*1000){
+    this.nofaceNode.matrix = mat4.rotateY(mat4.create(), this.nofaceNode.matrix, timeInMilliseconds*this.mouseSpeed);
   }
   else if (timeInMilliseconds < 30*1000){
-    // observe the no mask passing by
+    // observe no face staring
   }
   else{
     this.movie = false;
@@ -172,17 +187,4 @@ Camera.prototype.move = function (timeInMilliseconds) {
 
   this.look = mat3.add(vec3.create(), this.position, this.direction);
   this.up = vec3.cross(vec3.create(), right, this.direction);
-}
-
-Camera.prototype.reset = function () {
-  this.pressedKeys = {};
-
-  this.position = vec3.create(0, 0, 5);
-  this.direction = vec3.create();
-  this.look = vec3.create(0, 0, 0);
-  this.up = vec3.create();
-
-  this.horizontalAngle = Math.PI;
-  this.verticalAngle = 0;
-  this.mouseWheelDelta = 0;
 }

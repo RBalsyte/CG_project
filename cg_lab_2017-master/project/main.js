@@ -35,7 +35,7 @@ var spirits;
 var translateLight;
 var rotateLight;
 var lightNode;
-var noFaceNode;
+var nofaceNode;
 var spotlightNode;
 var translateSpotlight;
 
@@ -91,7 +91,7 @@ function init(resources) {
 
   gl.enable(gl.DEPTH_TEST);
   root = createSceneGraph(gl, resources);
-  camera = new Camera(root, gl.canvas, movementSpeed, mouseSpeed);
+  camera = new Camera(root, gl.canvas, movementSpeed, mouseSpeed, nofaceNode);
 }
 
 function createSceneGraph(gl, resources) {
@@ -303,21 +303,20 @@ function createSceneGraph(gl, resources) {
     noface.specular = [0, 0, 0, 1];
     noface.emission = [0, 0, 0, 1];
     noface.shininess = 0.0;
-    let nofaceNode = new TransformationSGNode(glm.transform({translate: [10, floorOffset + 2.5, -15], rotateZ : 125, scale: [1.5, 1.5, 1.5]}), [noface]);
-    shadowNode.append(nofaceNode);
-    rootnofloor.append(nofaceNode);
-  }
 
-  {
+    let nofaceBodyNode = new TransformationSGNode(glm.transform({translate: [0, floorOffset + 2.5, 0], rotateY: 90, rotateZ : 125, scale: [1.5, 1.5, 1.5]}), [noface]);
+
     let mask = new TransparentMaterialSGNode([new RenderSGNode(resources.nofacemask)]);
     mask.ambient = [1, 1, 1, 1];
     mask.diffuse = [0, 0, 0, 1];
     mask.specular = [0, 0, 0, 1];
     mask.emission = [0, 0, 0, 1];
     mask.shininess = 0;
-    let maskNode = new TransformationSGNode(glm.transform({translate: [9.75, floorOffset + 2.7, -15], rotateY: -90, scale: [0.2, 0.2, 0.2]}), [mask]);
-    shadowNode.append(maskNode);
-    rootnofloor.append(maskNode);
+    let maskNode = new TransformationSGNode(glm.transform({translate: [0, floorOffset + 2.7, 0.25], scale: [0.2, 0.2, 0.2]}), [mask]);
+
+    nofaceNode = new TransformationSGNode(glm.transform({translate: [16, 0, 8]}), [nofaceBodyNode, maskNode]);
+    shadowNode.append(nofaceNode);
+    rootnofloor.append(nofaceNode);
   }
 
   {
@@ -331,8 +330,6 @@ function createSceneGraph(gl, resources) {
     shadowNode.append(treeNode);
     rootnofloor.append(treeNode);
   }
-
-
 
   return root;
 }
