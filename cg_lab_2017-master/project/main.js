@@ -12,19 +12,15 @@ const fenceCount = 10;
 const windowSize = 1;
 const windowHeight = 1.3;
 const windowCount = 5;
-
+const floorOffset = -2;
 const movementSpeed = 0.005;
 const mouseSpeed = 0.0001;
-const floorOffset = -2;
 
 var gl = null;
 
 //default
 var width = 600;
 var height = 600;
-
-var animatedAngle = 0;
-var moveSpiritDown = true;
 
 var camera;
 //scene graph nodes
