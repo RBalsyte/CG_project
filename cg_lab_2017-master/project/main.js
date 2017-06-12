@@ -13,7 +13,7 @@ const windowSize = 1;
 const windowHeight = 1.3;
 const windowCount = 5;
 const floorOffset = -2;
-const movementSpeed = 0.002;
+const movementSpeed = 0.005;
 const mouseSpeed = 0.0001;
 
 var gl = null;
@@ -554,8 +554,6 @@ class TextureSGNode extends SGNode {
       gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
-
-
     gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableObjectTexture'), 0);
   }
 }
@@ -853,9 +851,8 @@ class RainSGNode extends SGNode {
 
   generateRainDrops(){
     for(var i = 0; i <= this.particleCount; i++){
-      var rainSphere = new TransparentMaterialSGNode(new RenderSGNode(makeSphere(0.02, 10, 10)));
+      var rainSphere = new MaterialSGNode(new RenderSGNode(makeSphere(0.02, 10, 10)));
       rainSphere.ambient = [0, 0, 0.7, 0.5];
-      rainSphere.alpha = 0.1;
       var rainDrop = new TransformationSGNode(glm.translate(getRandomInt(this.area, -this.area), getRandomInt(10, -2), getRandomInt(this.area, -this.area)), [rainSphere]);
       this.append(rainDrop);
     }
