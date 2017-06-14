@@ -20,6 +20,8 @@ struct Spiritlight {
     vec4 ambient;
     vec4 diffuse;
     vec4 specular;
+
+    float angle;
 };
 
 //illumination related variables
@@ -31,13 +33,21 @@ varying vec3 v_lightVec;
 
 // Spotlight uniform
 uniform Spiritlight u_spotlight;
-varying vec4 v_spotlightVec;
+varying vec3 v_spotlightVec;
+
+// Lamp uniform
+varying vec3 v_lampVec;
+uniform Spiritlight u_lamp;
 
 
 //texture related variables
-uniform bool u_enableObjectTexture;
-uniform sampler2D u_tex;
+uniform bool u_enableObjectTexture1;
+uniform bool u_enableObjectTexture2;
+uniform bool u_enableObjectTexture3;
+uniform sampler2D u_tex1;
 uniform sampler2D u_tex2;
+uniform sampler2D u_tex3;
+uniform float u_alpha;
 uniform bool u_enableColorLookup;
 varying vec2 v_texCoord;
 varying lowp vec4 v_color;
@@ -63,7 +73,7 @@ vec4 calculateSimplePointLight(Spiritlight light, Material material, vec3 lightV
     vec3 reflectVec = reflect(-lightVec,normalVec);
     float spec = pow( max( dot(reflectVec, eyeVec), 0.0) , material.shininess);
 
-    if(u_enableObjectTexture || u_enableColorLookup)
+    if(u_enableObjectTexture1 || u_enableColorLookup)
     {
         //replace diffuse and ambient matrial with texture color if texture is available
         material.diffuse = vec4(textureColor.rgb, 1);
@@ -90,7 +100,7 @@ vec4 calculateSimplePointLight(Spiritlight light, Material material, vec3 lightV
     //look up depth in u_depthMap and set shadow coefficient (shadowCoeff) to 0 based on depth comparison
     /*float zShadowMap = texture2D(u_depthMap, shadowMapTexCoord3D.xy).r;
     if(shadowMapTexCoord3D.z > zShadowMap)
-    shadowCoeff = 0.0;*/
+      shadowCoeff = 0.0;*/
 
     //Improve shadow quality by sampling multiple shadow coefficients (a.k.a. PCF)
     float sumShadowCoeff = 0.0;
@@ -106,11 +116,13 @@ vec4 calculateSimplePointLight(Spiritlight light, Material material, vec3 lightV
         sumShadowCoeff += subShadowCoeff;
       }
     }
+
+    // decrease intensity of contrast
     shadowCoeff = sumShadowCoeff/9.0;
 
     //apply shadow coefficient to diffuse and specular part
     vec4 finalColor = c_amb + shadowCoeff * (c_diff + c_spec) + c_em;
-    finalColor.a = finalColor.a * textureColor.a;
+    finalColor.a = textureColor.a;
 
     return finalColor;
 }
@@ -118,25 +130,28 @@ vec4 calculateSimplePointLight(Spiritlight light, Material material, vec3 lightV
 void main (void) {
 
     vec4 textureColor = vec4(0, 0, 0, 1);
-    if(u_enableObjectTexture)
+    if(u_enableObjectTexture1)
     {
-        vec4 color0 = texture2D(u_tex, vec2(v_texCoord));
-        vec4 color1 = texture2D(u_tex2, vec2(v_texCoord));
-        textureColor = color0 + color1;
+        vec4 color1 = texture2D(u_tex1, vec2(v_texCoord));
+        textureColor = color1;
+        if(u_enableObjectTexture2)
+        {
+            vec4 color2 = texture2D(u_tex2, vec2(v_texCoord));
+            textureColor = textureColor + color2;
+
+            if(u_enableObjectTexture3)
+            {
+                vec4 color3 = texture2D(u_tex3, vec2(v_texCoord));
+                textureColor = textureColor + color3;
+            }
+        }
     }
 
     if (u_enableColorLookup){
       textureColor = v_color;
     }
 
-
-    vec4 pointLight = calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor);
-    if(v_spotlightVec.w < 1.0)
-      gl_FragColor = pointLight;
-    else {
-      vec4 directLight = calculateSimplePointLight(u_spotlight, u_material, v_spotlightVec.xyz, v_normalVec, v_eyeVec, textureColor);
-      gl_FragColor = pointLight+ directLight;
-    }
-
+    gl_FragColor = calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor)
+    + calculateSimplePointLight(u_lamp, u_material, v_lampVec, v_normalVec, v_eyeVec, textureColor);
 
 }
