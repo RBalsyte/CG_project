@@ -160,6 +160,7 @@ function createSceneGraph(gl, resources) {
 
   }
 
+
   {
     //initialize light
     spotlightNode = new SpiritlightSGNode(); //use now framework implementation of light node
@@ -468,7 +469,7 @@ function renderToTexture(timeInMilliseconds, matrix, light, zNear){
 
   //render scenegraph
    //scene graph without floor to avoid reading from the same texture as we write to...
-  // 
+  //
   // context.projectionMatrix = mat4.perspective(mat4.create(), glm.deg2rad(90), width / height, 10, 600);
   //
   // lightModelMatrix = lampNode.matrix;

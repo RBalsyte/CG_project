@@ -154,4 +154,5 @@ void main (void) {
     gl_FragColor = calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor)
     + calculateSimplePointLight(u_lamp, u_material, v_lampVec, v_normalVec, v_eyeVec, textureColor);
 
+
 }
