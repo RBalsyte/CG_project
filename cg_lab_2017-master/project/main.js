@@ -338,7 +338,7 @@ function createSceneGraph(gl, resources) {
     mask.shininess = 0;
     let maskNode = new TransformationSGNode(glm.transform({translate: [0, floorOffset + 2.7, 0.25], scale: [0.2, 0.2, 0.2]}), [mask]);
 
-    nofaceNode = new TransformationSGNode(glm.transform({translate: [16, 0, 8]}), [nofaceBodyNode, maskNode]);
+    nofaceNode = new TransformationSGNode(glm.transform({translate: [10, 0, 8]}), [nofaceBodyNode, maskNode]);
     shadowNode.append(nofaceNode);
     rootnofloor.append(nofaceNode);
   }

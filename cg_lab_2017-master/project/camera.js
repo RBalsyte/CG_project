@@ -78,6 +78,7 @@ Camera.prototype.autoMove = function(timeInMilliseconds, deltaTime) {
   if (this.timer < 3*1000){
     mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed); // move forward
     this.verticalAngle -= this.mouseSpeed * 5; // adjust vertical angle, so the camera doesnt look upwards
+    displayText("Multitextured Fence");
   }
   // 1 second
   else if (this.timer < 4*1000){
@@ -86,19 +87,23 @@ Camera.prototype.autoMove = function(timeInMilliseconds, deltaTime) {
   }
   // 2 seonds
   else if (this.timer < 6*1000){
+    clearText();
     this.horizontalAngle += this.mouseSpeed * 200; // rotate to the left
   }
   // 2 seconds
   else if (this.timer < 9*1000){
+    displayText("Playful Spirits");
     // Observe Spirits
   }
   // 2 seconds
   else if (this.timer < 10*1000){
+      clearText();
       this.horizontalAngle += this.mouseSpeed * 100; // rotate to the left
       mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed); // move forward towards cylinder
   }
   // 3 seconds
   else if (this.timer < 13*1000){
+    displayText("Multiple Vertex Cylinder");
     //pause to observe cylinder
   }
   // 1 second
@@ -107,11 +112,12 @@ Camera.prototype.autoMove = function(timeInMilliseconds, deltaTime) {
   }
   // 3 seconds
   else if (this.timer < 16*1000){
+      this.verticalAngle -= this.mouseSpeed * 30;
       //pause to observe the spotlight
   }
   // 2 seonds
   else if (this.timer < 17*1000){
-    this.verticalAngle -= this.mouseSpeed * 65; // start looking downwards
+     clearText();
     this.horizontalAngle += this.mouseSpeed * 300; // rotate to the left
   }
   else if (this.timer < 18*1000){
@@ -124,32 +130,33 @@ Camera.prototype.autoMove = function(timeInMilliseconds, deltaTime) {
   }
   // 2 seconds
   else if (this.timer < 20*1000){
-    this.position.y +=0.2// start looking upwards
-    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed*3); // move forward
-    this.horizontalAngle -= this.mouseSpeed * 50;
+    //this.verticalAngle += this.mouseSpeed * 2.5; // start looking upwards
+    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed*2); // move forward
+    this.horizontalAngle -= this.mouseSpeed * 20;
   }
   // 3 second
   else if (this.timer < 25*1000){
+    displayText("House and Noface fading");
+    this.nofaceNode.matrix[14] = this.nofaceNode.matrix[14] + deltaTime*this.speed*0.5; // move no face along z axis
+    this.alpha -= 0.01;
     // pause to observe the inside of the hosue
   }
   // 1 second
   else if (this.timer < 26*1000){
-    this.verticalAngle += this.mouseSpeed * 10; // start looking upwards
-    this.horizontalAngle += this.mouseSpeed * 300; // rotate to the left
+    clearText();
+    this.verticalAngle += this.mouseSpeed * 5; // start looking upwards
+    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed*0.2); // move forward
   }
-  // 1 seconds
   else if (this.timer < 27*1000){
-    this.nofaceNode.matrix[14] = this.nofaceNode.matrix[14] - deltaTime*this.speed; // move no face along z axis
-    this.alpha -= 0.01;
+    this.horizontalAngle += this.mouseSpeed * 200; // rotate to the left
   }
-  else if (this.timer < 28*1000){
-    this.nofaceNode.matrix = mat4.rotateY(mat4.create(), this.nofaceNode.matrix, timeInMilliseconds*this.mouseSpeed);
-    this.alpha -= 0.01;
-  }
+
   else if (this.timer < 30*1000){
-    // observe no face staring
+    displayText("Rain outside");
+    // observe rain outside
   }
   else {
+    clearText();
     this.movie = false;
   }
 }
@@ -198,7 +205,7 @@ Camera.prototype.move = function (timeInMilliseconds) {
   }
   if (this.pressedKeys['KeyU']){
     // set back the noFace to where is initially was
-    this.nofaceNode.matrix = glm.transform({translate: [16, 0, 8], scale: [1.5, 1.5, 1.5]});
+    this.nofaceNode.matrix = glm.transform({translate: [10, 0, 8], scale: [1.5, 1.5, 1.5]});
     this.reset();
     this.movie = true;
   }
