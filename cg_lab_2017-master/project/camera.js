@@ -9,6 +9,8 @@ function Camera(scene, canvas, speed, mouseSpeed, nofaceNode) {
   this.mouseSpeed = mouseSpeed;
   this.movie = true;
   this.nofaceNode = nofaceNode;
+  this.timer = 0;
+  this.alpha = 1;
 
   this.previousTime = 0;
   this.PI_2 = Math.PI / 2;
@@ -66,74 +68,85 @@ Camera.prototype.reset = function () {
   this.horizontalAngle = Math.PI;
   this.verticalAngle = 0;
   this.mouseWheelDelta = 0;
+  this.timer = 0;
+  this.alpha = 1;
 }
 
 Camera.prototype.autoMove = function(timeInMilliseconds, deltaTime) {
-
+  this.timer += deltaTime;
   // 3 seconds
-  if (timeInMilliseconds < 3*1000){
+  if (this.timer < 3*1000){
     mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed); // move forward
-    this.verticalAngle -= this.mouseSpeed * 10; // adjust vertical angle, so the camera doesnt look upwards
+    this.verticalAngle -= this.mouseSpeed * 5; // adjust vertical angle, so the camera doesnt look upwards
   }
   // 1 second
-  else if (timeInMilliseconds < 4*1000){
+  else if (this.timer < 4*1000){
+    this.verticalAngle += this.mouseSpeed * 5;
     //pause to observe multitextured fence
   }
   // 2 seonds
-  else if (timeInMilliseconds < 6*1000){
-    this.horizontalAngle += this.mouseSpeed * 300; // rotate to the left
+  else if (this.timer < 6*1000){
+    this.horizontalAngle += this.mouseSpeed * 200; // rotate to the left
   }
   // 2 seconds
-  else if (timeInMilliseconds < 8*1000){
-    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed); // move forward
+  else if (this.timer < 9*1000){
+    // Observe Spirits
   }
   // 2 seconds
-  else if (timeInMilliseconds < 10*1000){
-      this.horizontalAngle += this.mouseSpeed * 500; // rotate to the left
+  else if (this.timer < 10*1000){
+      this.horizontalAngle += this.mouseSpeed * 100; // rotate to the left
+      mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed); // move forward towards cylinder
   }
-  // 3 seonds
-  else if (timeInMilliseconds < 13*1000){
-    //pause to observe spirits and the shadows
+  // 3 seconds
+  else if (this.timer < 13*1000){
+    //pause to observe cylinder
   }
   // 1 second
-  else if (timeInMilliseconds < 14*1000){
+  else if (this.timer < 14*1000){
     this.verticalAngle += this.mouseSpeed * 65; // start looking upwards
   }
   // 3 seconds
-  else if (timeInMilliseconds < 17*1000){
+  else if (this.timer < 16*1000){
       //pause to observe the spotlight
   }
   // 2 seonds
-  else if (timeInMilliseconds < 19*1000){
-    this.verticalAngle -= this.mouseSpeed * 30; // start looking downwards
-    this.horizontalAngle += this.mouseSpeed * 180; // rotate to the left
-    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * (this.speed)); // move forward
+  else if (this.timer < 17*1000){
+    this.verticalAngle -= this.mouseSpeed * 65; // start looking downwards
+    this.horizontalAngle += this.mouseSpeed * 300; // rotate to the left
+  }
+  else if (this.timer < 18*1000){
+    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * (this.speed*2)); // move forward
   }
   // 1 seond
-  else if (timeInMilliseconds < 20*1000){
-    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed); // move forward
+  else if (this.timer < 19*1000){
+      this.horizontalAngle -= this.mouseSpeed * 230; // rotate to the right
+      this.verticalAngle += this.mouseSpeed * 20;
   }
   // 2 seconds
-  else if (timeInMilliseconds < 22*1000){
-    this.horizontalAngle -= this.mouseSpeed * 310; // rotate to the right
-    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed); // move forward
+  else if (this.timer < 20*1000){
+    this.position.y +=0.2// start looking upwards
+    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed*3); // move forward
+    this.horizontalAngle -= this.mouseSpeed * 50;
   }
   // 3 second
-  else if (timeInMilliseconds < 25*1000){
+  else if (this.timer < 25*1000){
     // pause to observe the inside of the hosue
   }
   // 1 second
-  else if (timeInMilliseconds < 26*1000){
-    this.horizontalAngle += this.mouseSpeed * 200; // rotate to the left
+  else if (this.timer < 26*1000){
+    this.verticalAngle += this.mouseSpeed * 10; // start looking upwards
+    this.horizontalAngle += this.mouseSpeed * 300; // rotate to the left
   }
   // 1 seconds
-  else if (timeInMilliseconds < 27*1000){
+  else if (this.timer < 27*1000){
     this.nofaceNode.matrix[14] = this.nofaceNode.matrix[14] - deltaTime*this.speed; // move no face along z axis
+    this.alpha -= 0.01;
   }
-  else if (timeInMilliseconds < 28*1000){
+  else if (this.timer < 28*1000){
     this.nofaceNode.matrix = mat4.rotateY(mat4.create(), this.nofaceNode.matrix, timeInMilliseconds*this.mouseSpeed);
+    this.alpha -= 0.01;
   }
-  else if (timeInMilliseconds < 30*1000){
+  else if (this.timer < 30*1000){
     // observe no face staring
   }
   else {
@@ -162,6 +175,8 @@ Camera.prototype.move = function (timeInMilliseconds) {
     Math.cos(this.horizontalAngle - this.PI_2)
   );
 
+
+
   if (this.mouseWheelDelta != 0){
     mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, this.mouseWheelDelta);
     this.mouseWheelDelta = 0;
@@ -180,6 +195,12 @@ Camera.prototype.move = function (timeInMilliseconds) {
   }
   if (this.pressedKeys['KeyM']){
     this.movie = false;
+  }
+  if (this.pressedKeys['KeyU']){
+    // set back the noFace to where is initially was
+    this.nofaceNode.matrix = glm.transform({translate: [16, 0, 8], scale: [1.5, 1.5, 1.5]});
+    this.reset();
+    this.movie = true;
   }
   if (!this.movie && this.pressedKeys['KeyR']){
     this.reset();

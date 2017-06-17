@@ -122,7 +122,8 @@ vec4 calculateSimplePointLight(Spiritlight light, Material material, vec3 lightV
 
     //apply shadow coefficient to diffuse and specular part
     vec4 finalColor = c_amb + shadowCoeff * (c_diff + c_spec) + c_em;
-    finalColor.a = textureColor.a;
+
+    finalColor.a = textureColor.a * u_alpha;
 
     return finalColor;
 }
