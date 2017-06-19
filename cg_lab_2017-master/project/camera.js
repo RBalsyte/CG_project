@@ -131,7 +131,7 @@ Camera.prototype.autoMove = function(timeInMilliseconds, deltaTime) {
   // 2 seconds
   else if (this.timer < 20*1000){
     //this.verticalAngle += this.mouseSpeed * 2.5; // start looking upwards
-    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed*2); // move forward
+    mat3.multiplyScalarAndAdd(this.position, this.position, this.direction, deltaTime * this.speed*2.3); // move forward
     this.horizontalAngle -= this.mouseSpeed * 20;
   }
   // 3 second
@@ -202,6 +202,7 @@ Camera.prototype.move = function (timeInMilliseconds) {
   }
   if (this.pressedKeys['KeyM']){
     this.movie = false;
+    clearText();
   }
   if (this.pressedKeys['KeyU']){
     // set back the noFace to where is initially was

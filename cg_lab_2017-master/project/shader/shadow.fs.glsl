@@ -62,6 +62,39 @@ varying vec4 v_shadowMapTexCoord;
 uniform sampler2D u_depthMap;
 
 vec4 calculateSimplePointLight(Spiritlight light, Material material, vec3 lightVec, vec3 normalVec, vec3 eyeVec, vec4 textureColor) {
+	lightVec = normalize(lightVec);
+	normalVec = normalize(normalVec);
+	eyeVec = normalize(eyeVec);
+
+		//TASK 1-1 implement phong shader
+	//compute diffuse term
+	float diffuse = max(dot(normalVec,lightVec),0.0);
+
+	//compute specular term
+	vec3 reflectVec = reflect(-lightVec,normalVec);
+	float spec = pow( max( dot(reflectVec, eyeVec), 0.0) , material.shininess);
+
+  if(u_enableObjectTexture1 || u_enableColorLookup)
+  {
+      //replace diffuse and ambient matrial with texture color if texture is available
+      material.diffuse = vec4(textureColor.rgb, 1);
+      material.ambient = vec4(textureColor.rgb, 1);
+  }
+
+
+	vec4 c_amb  = clamp(light.ambient * material.ambient, 0.0, 1.0);
+	vec4 c_diff = clamp(diffuse * light.diffuse * material.diffuse, 0.0, 1.0);
+	vec4 c_spec = clamp(spec * light.specular * material.specular, 0.0, 1.0);
+	vec4 c_em   = material.emission;
+
+	vec4 finalColor = c_amb + c_diff + c_spec + c_em;
+
+  finalColor.a = textureColor.a * u_alpha;
+
+  return finalColor;
+}
+
+vec4 calculateSimplePointLight2(Spiritlight light, Material material, vec3 lightVec, vec3 normalVec, vec3 eyeVec, vec4 textureColor) {
     lightVec = normalize(lightVec);
     normalVec = normalize(normalVec);
     eyeVec = normalize(eyeVec);
@@ -152,8 +185,9 @@ void main (void) {
       textureColor = v_color;
     }
 
-    gl_FragColor = calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor)
-    + calculateSimplePointLight(u_lamp, u_material, v_lampVec, v_normalVec, v_eyeVec, textureColor);
+    gl_FragColor = calculateSimplePointLight2(u_lamp, u_material, v_lampVec, v_normalVec, v_eyeVec, textureColor) +
+    calculateSimplePointLight2(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor);
+
 
 
 }

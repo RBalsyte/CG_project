@@ -121,46 +121,11 @@ function createSceneGraph(gl, resources) {
     //add node for setting shadow parameters
     shadowNode = new ShadowSGNode(renderTargetDepthTexture, 3, width, height);
     root.append(shadowNode);
-
-    shadowNode2 = new ShadowSGNode(renderTargetDepthTexture, 3, width, height);
-    root.append(shadowNode2);
   }
 
   {
     //create scenegraph without floor and shadow shader
     rootnofloor = new ShaderSGNode(createProgram(gl, resources.vs_shadow, resources.fs_shadow));
-  }
-
-  {
-    //initialize sun above the house
-    sun = new LightSGNode();
-    sun.ambient = [0.1, 0.1, 0.1, 1];
-    sun.diffuse = [1, 1, 1, 1];
-    sun.specular = [1, 1, 0, 1];
-    sun.position = [15, 20, 5];
-
-    sunNode = new TransformationSGNode(glm.transform({ translate: [15, 20, 5]}));
-    sunNode.append(sun);
-    sunNode.append(createLightSphere());
-
-    shadowNode.append(sunNode);
-  }
-
-  {
-    lamp = new SpiritlightSGNode();
-    lamp.ambient = [0.1, 0.1, 0.1, 1];
-    lamp.diffuse = [1, 1, 1, 1];
-    lamp.specular = [1, 0, 0, 1];
-    lamp.position = [8, 1, 9];
-    lamp.uniform = 'u_lamp';
-
-    lampNode = new TransformationSGNode(glm.transform({translate: [8, 1, 9]}), [createLightSphere()]);
-    lampNode.append(lamp);
-    shadowNode2.append(lampNode);
-
-    lampStringNode = new TransformationSGNode(glm.transform({translate: [8, 4, 9], rotateZ:90, rotateX: 90}), [new RenderSGNode(createCylinder(15, 1, 0.01))]);
-    shadowNode2.append(lampStringNode);
-
   }
 
 
@@ -355,6 +320,38 @@ function createSceneGraph(gl, resources) {
     rootnofloor.append(treeNode);
   }
 
+  {
+    //initialize sun above the house
+    sun = new LightSGNode();
+    sun.ambient = [0.2, 0.2, 0.2, 1];
+    sun.diffuse = [1, 1, 1, 1];
+    sun.specular = [1, 1, 0, 1];
+    sun.position = [15, 20, 5];
+
+    sunNode = new TransformationSGNode(glm.transform({ translate: [15, 20, 5]}));
+    sunNode.append(sun);
+    sunNode.append(createLightSphere());
+
+    shadowNode.append(sunNode);
+  }
+
+  {
+    lamp = new SpiritlightSGNode();
+    lamp.ambient = [0.1,0.1, 0.1, 1];
+    lamp.diffuse = [1,1, 1, 1];
+    lamp.specular = [1, 0, 0, 1];
+    lamp.position = [8, 1, 9];
+    lamp.uniform = 'u_lamp';
+
+    lampNode = new TransformationSGNode(glm.transform({translate: [8, 1, 9]}), [createLightSphere()]);
+    lampNode.append(lamp);
+    shadowNode.append(lampNode);
+
+    lampStringNode = new TransformationSGNode(glm.transform({translate: [8, 4, 9], rotateZ:90, rotateX: 90}), [new RenderSGNode(createCylinder(15, 1, 0.01))]);
+    shadowNode.append(lampStringNode);
+
+  }
+
   return root;
 }
 
@@ -445,22 +442,30 @@ function renderToTexture(timeInMilliseconds){
   const context = createSGContext(gl);
 
   //setup a projection matrix for the light camera which is large enough to capture our scene
-  context.projectionMatrix = mat4.perspective(mat4.create(), glm.deg2rad(90), width / height, 30, 600);
+  context.projectionMatrix = mat4.perspective(mat4.create(), glm.deg2rad(35), width / height, 20, 600);
   //compute the light's position in world space
   let lightModelMatrix = sunNode.matrix;
   let lightPositionVector = vec4.fromValues(sun.position[0], sun.position[1], sun.position[2], 1);
   let worldLightPos = vec4.transformMat4(vec4.create(), lightPositionVector, lightModelMatrix);
 
+  lightModelMatrix = mat4.multiply(mat4.create(), lampNode.matrix, lamp.matrix);
+  lightPositionVector = vec4.fromValues(lamp.position[0], lamp.position[1], lamp.position[2], 1);
+  let houseLightPos = vec4.transformMat4(vec4.create(), lightPositionVector, lightModelMatrix);
+
   //let the light "shine" towards the scene center (i.e. towards C3PO)
   let worldLightLookAtPos = [0,0,0];
+  let houseLightLookAtPos = [7.5, floorOffset + 0.2, 12];
+
   let upVector = [0,1,0];
   //TASK 1.1: setup camera to look at the scene from the light's perspective
   let lookAtMatrix = mat4.lookAt(mat4.create(), worldLightPos, worldLightLookAtPos, upVector);
-  //let lookAtMatrix = mat4.lookAt(mat4.create(), [0,1,-10], [0,0,0], [0,1,0]); //replace me for TASK 1.1
+
+  let houselookAtMatrix = mat4.lookAt(mat4.create(), houseLightPos, houseLightLookAtPos, upVector);
+
   context.viewMatrix = lookAtMatrix;
 
   //multiply and save light projection and view matrix for later use in shadow mapping shader!
-  shadowNode.lightViewProjectionMatrix = mat4.multiply(mat4.create(),context.projectionMatrix,context.viewMatrix);
+  shadowNode.lightViewProjectionMatrix = mat4.multiply(mat4.create(),context.projectionMatrix, context.viewMatrix);
 
   rootnofloor.render(context);
   //disable framebuffer (render to screen again)
@@ -609,31 +614,31 @@ function createCylinder(segments, length, radius) {
 
   var angle;
   var alpha = 360 / segments;
-  var zCoord = 0;
-  var v = -length/2
+  var z = 0;
 
   for (var j = 0; j < length + 1; j++) {
     //Reset angle for each face of the length
     angle = 0;
     for (var i = 0; i < segments ;i++) {
-      vertices.push(radius*Math.cos(glm.deg2rad(angle))); //X
-      vertices.push(radius*Math.sin(glm.deg2rad(angle))); //Y
-      vertices.push(zCoord); //Z
+      vertices.push(radius*Math.cos(glm.deg2rad(angle)));
+      vertices.push(radius*Math.sin(glm.deg2rad(angle)));
+      vertices.push(z);
 
-      normals.push(Math.cos(glm.deg2rad(angle))); //X
-      normals.push(Math.sin(glm.deg2rad(angle))); //Y
-      normals.push(zCoord); //Z
+      normals.push(radius * Math.cos(glm.deg2rad(angle)));
+      normals.push(radius * Math.sin(glm.deg2rad(angle)));
+      normals.push(z);
 
-      var u = 1 - (i / segments);
-      var w = 1 - (j / length);
+      var u = 1 - (i / segments -1);
+      var w = 1 - (j / length -1);
       textureCoordData.push(u);
       textureCoordData.push(w);
+
       //Update angle
       angle = angle + alpha;
     }
 
     //Updating z coordinate
-    zCoord = zCoord + (1 / length);
+    z = z + (1 / length);
   }
 
 
@@ -646,24 +651,26 @@ function createCylinder(segments, length, radius) {
     lengthInc = j * segments;
 
     for (i = 0; i < segments; i++) {
+      var first = i + lengthInc;
+      var second = first + segments;
 
       if (i != segments - 1) {
-        indices.push(i + lengthInc);
-        indices.push(i + lengthInc + segments);
-        indices.push(i + lengthInc + segments + 1);
+        indices.push(first);
+        indices.push(second);
+        indices.push(second + 1);
 
-        indices.push(i + lengthInc + segments + 1);
-        indices.push(i + lengthInc + 1);
-        indices.push(i + lengthInc);
+        indices.push(second + 1);
+        indices.push(first + 1);
+        indices.push(first);
       }
       else {
-        indices.push(i + lengthInc);
-        indices.push(i + lengthInc + segments);
-        indices.push(lengthInc + segments);
+        indices.push(first);
+        indices.push(second);
+        indices.push(second - i);
 
-        indices.push(lengthInc + segments);
-        indices.push(lengthInc);
-        indices.push(i + lengthInc);
+        indices.push(second - i);
+        indices.push(first - i);
+        indices.push(first);
       }
     }
   }
