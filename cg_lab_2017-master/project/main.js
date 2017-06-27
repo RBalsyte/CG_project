@@ -26,12 +26,8 @@ var height = 600;
 var lampSwingSpeed = 0.02;
 var lampAngle = 0;
 var camera;
-
 //scene graph nodes
 var root = null;
-var rootnofloor = null;
-var shadowNode;
-var shadowNode2;
 var spirits;
 var sunNode;
 var sun;
@@ -61,8 +57,8 @@ var renderTargetFramebuffer;
 
 //load the required resources using a utility function
 loadResources({
-  vs_shadow: 'shader/shadow.vs.glsl',
-  fs_shadow: 'shader/shadow.fs.glsl',
+  vs: 'shader/main.vs.glsl',
+  fs: 'shader/main.fs.glsl',
   vs_single: 'shader/single.vs.glsl',
   fs_single: 'shader/single.fs.glsl',
   floortexture: 'models/grass.jpg',
@@ -87,9 +83,12 @@ loadResources({
 
 function init(resources) {
   gl = createContext();
+
+  // Set window height and width
   width = window.innerWidth;
   height = window.innerHeight;
 
+// Initialize textures
   initTextures(resources);
   initRenderToTexture();
 
@@ -100,7 +99,7 @@ function init(resources) {
 
 function createSceneGraph(gl, resources) {
   //create scenegraph root
-  const root = new ShaderSGNode(createProgram(gl, resources.vs_shadow, resources.fs_shadow));
+  const root = new ShaderSGNode(createProgram(gl, resources.vs, resources.fs));
 
   //create Light Sphere for vizualization
   function createLightSphere() {
@@ -118,194 +117,140 @@ function createSceneGraph(gl, resources) {
   }
 
   {
-    //add node for setting shadow parameters
-    shadowNode = new ShadowSGNode(renderTargetDepthTexture, 3, width, height);
-    root.append(shadowNode);
-  }
-
-  {
-    //create scenegraph without floor and shadow shader
-    rootnofloor = new ShaderSGNode(createProgram(gl, resources.vs_shadow, resources.fs_shadow));
-  }
-
-
-  {
     //initialize light
-    spotlightNode = new SpiritlightSGNode(); //use now framework implementation of light node
-    spotlightNode.ambient = [0, 0, 0, 0];
-    spotlightNode.diffuse = [1, 0, 1, 1];
-    spotlightNode.specular = [1, 0, 0, 1];
-    spotlightNode.position = [-3, 4, 0];
-    spotlightNode.uniform = 'u_spotlight';
-    spotlightNode.direction = [-1,-1,0];
-    spotlightNode.angle = 30.0;
+    sunNode = new DirectionalLight([15, 20, 5], [createLightSphere()]);
+    root.append(sunNode);
+  }
 
-    translateSpotlight = new TransformationSGNode(glm.transform({ translate: [-3, 4, 0]}));
+  {
+    // initialize lamp inside house
+    lampNode = new PointLight([8, 3, 9], [createLightSphere()]);
+    lampNode.ambient = [0, 0, 0, 1];
+    lampNode.diffuse = [1, 1, 1, 1];
+    lampNode.specular = [1, 1, 1, 1];
+    root.append(lampNode);
 
-    translateSpotlight.append(spotlightNode);
-    translateSpotlight.append(createLightSphere());
-    shadowNode.append(translateSpotlight);
+    // transform to some position and rotate the String, created with the Cylinder
+    lampStringNode = new TransformationSGNode(glm.transform({translate: [8, 4, 9], rotateZ:90, rotateX: 90}), [new RenderSGNode(createCylinder(15, 1, 0.01))]);
+    root.append(lampStringNode);
+  }
+
+  {
+    //initialize spotlight
+    spotlightNode = new SpotLight([-3, 4, 0], [createLightSphere()]);
+    root.append(spotlightNode);
   }
 
   {
     let floor = new TransparentMaterialSGNode(new TextureSGNode(floorTexture, 0, new RenderSGNode(makeRectangle(floorSize, floorSize, floorCount, floorCount))));
-    floor.ambient = [0, 0, 0, 1];
-    floor.diffuse = [0.1, 0.1, 0.1, 1];
-    floor.specular = [0.5, 0.5, 0.5, 1];
-    floor.shininess = 50.0;
-
-    shadowNode.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset, 0], rotateX: -90, scale: 1}), [floor]));
+    root.append(new TransformationSGNode(glm.transform({ translate: [0, floorOffset, 0], rotateX: -90, scale: 1}), [floor]));
   }
 
   {
+    // Create fence nodes and transform them to the edges of the floor, also rotate accordingly
     let fence = new TransparentMaterialSGNode(new TextureSGNode(fenceTexture, 0, new RenderSGNode(makeRectangle(floorSize, fenceHeight, fenceCount, 1)), oldTexture, 1));
-    fence.ambient = [0, 0, 0, 1];
-    fence.diffuse = [0.1, 0.1, 0.1, 1];
-    fence.specular = [0.5, 0.5, 0.5, 1];
-    fence.shininess = 50.0;
 
     let fenceNode1 = new TransformationSGNode(glm.transform({ translate: [0, fenceHeight + floorOffset, floorSize], rotateY: 180, scale: 1}), [Object.create(fence)]);
     let fenceNode2 = new TransformationSGNode(glm.transform({ translate: [0, fenceHeight + floorOffset, -floorSize],  scale: 1}), [Object.create(fence)]);
     let fenceNode3 = new TransformationSGNode(glm.transform({ translate: [floorSize, fenceHeight + floorOffset, 0], rotateY: -90, scale: 1}), [Object.create(fence)]);
     let fenceNode4 = new TransformationSGNode(glm.transform({ translate: [-floorSize, fenceHeight + floorOffset, 0], rotateY: 90, scale: 1}), [fence]);
 
-    shadowNode.append(fenceNode1);
-    rootnofloor.append(fenceNode1);
-    shadowNode.append(fenceNode2);
-    rootnofloor.append(fenceNode2);
-    shadowNode.append(fenceNode3);
-    rootnofloor.append(fenceNode3);
-    shadowNode.append(fenceNode4);
-    rootnofloor.append(fenceNode4);
+    root.append(fenceNode1);
+    root.append(fenceNode2);
+    root.append(fenceNode3);
+    root.append(fenceNode4);
   }
 
   {
+    // create rain
     let rain = new RainSGNode(300, floorSize);
-    shadowNode.append(rain);
+    root.append(rain);
   }
 
   {
     let houseRoof = new TransparentMaterialSGNode([new RenderSGNode(resources.houseroof)]);
-    houseRoof.ambient = [0, 0, 0, 1];
-    houseRoof.diffuse = [0.1, 0.1, 0.1, 1];
-    houseRoof.specular = [0.5, 0.5, 0.5, 1];
-    houseRoof.shininess = 1000.0;
 
-    let houseRoofNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset, 9], scale: [0.5,0.5,1]}), [houseRoof]);
-    shadowNode.append(houseRoofNode);
-    rootnofloor.append(houseRoofNode);
+    let houseRoofNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset, 9], scale: [0.6,0.5,1.1]}), [houseRoof]);
+    root.append(houseRoofNode);
   }
 
   {
     let window1 = new TransparentMaterialSGNode(new TextureSGNode(windowTexture, 0, new RenderSGNode(makeRectangle(1, 1.4, 1, 1))));
-    window1.ambient = [0, 0, 0, 1];
-    window1.diffuse = [0.1, 0.1, 0.1, 1];
-    window1.specular = [1, 1, 1, 1];
-    window1.shininess = 10;
     window1.alpha = 0.5;
 
     let windowNode = new TransformationSGNode(glm.transform({ translate: [5.5, 0.9, 18.8], rotateZ:-90}), [window1]);
-    shadowNode.append(windowNode);
-    rootnofloor.append(windowNode);
+    root.append(windowNode);
   }
 
   {
-    let window2 = new TransparentMaterialSGNode(new WindowSGNode(2.2, 0.91, 0.39));
-    window2.ambient = [0, 0, 0, 1];
-    window2.diffuse = [0.1, 0.1, 0.1, 1];
-    window2.specular = [1, 1, 1, 1];
-    window2.shininess = 10;
 
-    let windowNode2 = new TransformationSGNode(glm.transform({ translate: [12.0, 0.8, 4.3], rotateY: -90, scale: 1}), [window2]);
-    shadowNode.append(windowNode2);
-    rootnofloor.append(windowNode2);
+    let window2 = new TransparentMaterialSGNode(new WindowSGNode(2.2, 0.91, 0.39));
+
+    let windowNode2 = new TransformationSGNode(glm.transform({ translate: [13.0, 0.8, 4.3], rotateY: -90, scale: 1}), [window2]);
+    root.append(windowNode2);
   }
 
   {
     let houseBody = new TransparentMaterialSGNode([new RenderSGNode(resources.housebody)]);
     houseBody.ambient = [0.9, 0, 0, 0.5];
     houseBody.diffuse = [0.9, 0, 0, 0.5];
-    houseBody.specular = [0.5, 0.5, 0.5, 1];
-    houseBody.shininess = 1000;
 
     let houseBodyNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset, 9], rotateY: 180, scale: [0.5,0.5,1]}), [houseBody]);
-    shadowNode.append(houseBodyNode);
-    rootnofloor.append(houseBodyNode);
+    root.append(houseBodyNode);
   }
 
   {
     let houseFloor = new TransparentMaterialSGNode(new TextureSGNode(houseFloorTexture, 0, new RenderSGNode(makeRectangle(10, 10, 10, 10)), dirtTexture, 1, crackTexture, 2));
-    houseFloor.ambient = [0, 0, 0, 1];
-    houseFloor.diffuse = [0.1, 0.1, 0.1, 1];
-    houseFloor.specular = [0.5, 0.5, 0.5, 1];
-    houseFloor.shininess = 50.0;
 
     let houseFloorNode = new TransformationSGNode(glm.transform({translate: [8, floorOffset + 0.05, 9], rotateX: -90, scale: [0.5,1,1]}), [houseFloor]);
-    shadowNode.append(houseFloorNode);
+    root.append(houseFloorNode);
   }
 
   {
     let chair = new TransparentMaterialSGNode([new RenderSGNode(resources.chair)]);
     chair.ambient = [0.5, 0.2, 0.1, 1];
-    chair.diffuse = [0.1, 0.1, 0.1, 1];
-    chair.specular = [1, 1, 1, 1];
-    chair.shininess = 10;
+    chair.diffuse = [0.5, 0.2, 0.1, 1];
 
     let chairNode1 = new TransformationSGNode(glm.transform({ translate: [5.5, floorOffset + 1.2, 12], rotateY:90, scale: 0.1}), [chair]);
-    shadowNode.append(chairNode1);
-    rootnofloor.append(chairNode1);
+    root.append(chairNode1);
 
     let chairNode2 = new TransformationSGNode(glm.transform({ translate: [9.5, floorOffset + 1.2, 12], rotateY:-90, scale: 0.1}), [Object.create(chair)]);
-    shadowNode.append(chairNode2);
-    rootnofloor.append(chairNode2);
+    root.append(chairNode2);
   }
 
   {
     let table = new TransparentMaterialSGNode([new RenderSGNode(resources.table)]);
     table.ambient = [0.5, 0.2, 0.1, 1];
-    table.diffuse = [0.1, 0.1, 0.1, 1];
-    table.specular = [1, 1, 1, 1];
-    table.shininess = 10;
+    table.diffuse = [0.5, 0.2, 0.1, 1];
 
     let tableNode = new TransformationSGNode(glm.transform({ translate: [7.5, floorOffset + 0.2, 12], rotateY:90, scale: 0.05}), [table]);
-    shadowNode.append(tableNode);
-    rootnofloor.append(tableNode);
+    root.append(tableNode);
   }
 
   {
     spirits = new SpiritsSGNode(10);
-    shadowNode.append(spirits);
-    rootnofloor.append(spirits);
+    root.append(spirits);
   }
 
   {
+    // create Cylinder material and cover with concreteTexture
     let cylinderMaterial = new TransparentMaterialSGNode(new TextureSGNode(concreteTexture, 0, new RenderSGNode(createCylinder(15, 1, 0.5))));
     let cylinderNode = new TransformationSGNode(glm.transform({translate: [-3, floorOffset, 0], rotateX: -90, scale: [0.5, 0.5, 6]}), [cylinderMaterial]);
-    shadowNode.append(cylinderNode);
-    rootnofloor.append(cylinderNode);
+    root.append(cylinderNode);
   }
 
   {
+    // Create multiple part object noface with body and mask
     noface = new TransparentMaterialSGNode([new RenderSGNode(resources.noface)]);
-    noface.ambient = [0, 0, 0, 1];
-    noface.diffuse = [0.1, 0.1, 0.1, 1];
-    noface.specular = [0, 0, 0, 1];
-    noface.emission = [0, 0, 0, 1];
-    noface.shininess = 0.0;
-
     let nofaceBodyNode = new TransformationSGNode(glm.transform({translate: [0, floorOffset + 2.5, 0], rotateY: 90, rotateZ : 125, scale: [1.5, 1.5, 1.5]}), [noface]);
 
     mask = new TransparentMaterialSGNode([new RenderSGNode(resources.nofacemask)]);
     mask.ambient = [1, 1, 1, 1];
-    mask.diffuse = [0, 0, 0, 1];
-    mask.specular = [0, 0, 0, 1];
-    mask.emission = [0, 0, 0, 1];
-    mask.shininess = 0;
+    mask.diffuse = [1, 1, 1, 1];
     let maskNode = new TransformationSGNode(glm.transform({translate: [0, floorOffset + 2.7, 0.25], scale: [0.2, 0.2, 0.2]}), [mask]);
 
     nofaceNode = new TransformationSGNode(glm.transform({translate: [10, 0, 8]}), [nofaceBodyNode, maskNode]);
-    shadowNode.append(nofaceNode);
-    rootnofloor.append(nofaceNode);
+    root.append(nofaceNode);
   }
 
   {
@@ -313,48 +258,15 @@ function createSceneGraph(gl, resources) {
     tree.ambient = [0.24725, 0.3995, 0.745, 1];
     tree.diffuse = [0.75164, 0.60648, 0.22648, 1];
     tree.specular = [0.228281, 0.655802, 0.766065, 1];
-    tree.shininess = 0.7;
 
     let treeNode = new TransformationSGNode(glm.transform({translate: [-10, floorOffset, -3], scale: 0.2}), [tree]);
-    shadowNode.append(treeNode);
-    rootnofloor.append(treeNode);
-  }
-
-  {
-    //initialize sun above the house
-    sun = new LightSGNode();
-    sun.ambient = [0.2, 0.2, 0.2, 1];
-    sun.diffuse = [1, 1, 1, 1];
-    sun.specular = [1, 1, 0, 1];
-    sun.position = [15, 20, 5];
-
-    sunNode = new TransformationSGNode(glm.transform({ translate: [15, 20, 5]}));
-    sunNode.append(sun);
-    sunNode.append(createLightSphere());
-
-    shadowNode.append(sunNode);
-  }
-
-  {
-    lamp = new SpiritlightSGNode();
-    lamp.ambient = [0.1,0.1, 0.1, 1];
-    lamp.diffuse = [1,1, 1, 1];
-    lamp.specular = [1, 0, 0, 1];
-    lamp.position = [8, 1, 9];
-    lamp.uniform = 'u_lamp';
-
-    lampNode = new TransformationSGNode(glm.transform({translate: [8, 1, 9]}), [createLightSphere()]);
-    lampNode.append(lamp);
-    shadowNode.append(lampNode);
-
-    lampStringNode = new TransformationSGNode(glm.transform({translate: [8, 4, 9], rotateZ:90, rotateX: 90}), [new RenderSGNode(createCylinder(15, 1, 0.01))]);
-    shadowNode.append(lampStringNode);
-
+    root.append(treeNode);
   }
 
   return root;
 }
 
+// Initialize textures by activating and binding them
 function initTextures(resources){
   floorTexture = gl.createTexture();
   initTexture(floorTexture, resources.floortexture);
@@ -396,7 +308,7 @@ function initRenderToTexture() {
   var depthTextureExt = gl.getExtension("WEBGL_depth_texture");
   if(!depthTextureExt) { alert('No depth texture support!!!'); return; }
 
-  //generate color texture (required mainly for debugging and to avoid bugs in some WebGL platforms)
+  //generate color texture fo debug
   renderTargetFramebuffer = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, renderTargetFramebuffer);
 
@@ -430,51 +342,20 @@ function initRenderToTexture() {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
-function renderToTexture(timeInMilliseconds){
-  //bind framebuffer to draw scene into texture
-  gl.bindFramebuffer(gl.FRAMEBUFFER, renderTargetFramebuffer);
-
-  //setup viewport
-  gl.viewport(0, 0, width, height);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-  //setup context and camera matrices
-  const context = createSGContext(gl);
-
-  //setup a projection matrix for the light camera which is large enough to capture our scene
-  context.projectionMatrix = mat4.perspective(mat4.create(), glm.deg2rad(35), width / height, 20, 600);
-  //compute the light's position in world space
-  let lightModelMatrix = sunNode.matrix;
-  let lightPositionVector = vec4.fromValues(sun.position[0], sun.position[1], sun.position[2], 1);
-  let worldLightPos = vec4.transformMat4(vec4.create(), lightPositionVector, lightModelMatrix);
-
-  lightModelMatrix = mat4.multiply(mat4.create(), lampNode.matrix, lamp.matrix);
-  lightPositionVector = vec4.fromValues(lamp.position[0], lamp.position[1], lamp.position[2], 1);
-  let houseLightPos = vec4.transformMat4(vec4.create(), lightPositionVector, lightModelMatrix);
-
-  //let the light "shine" towards the scene center (i.e. towards C3PO)
-  let worldLightLookAtPos = [0,0,0];
-  let houseLightLookAtPos = [7.5, floorOffset + 0.2, 12];
-
-  let upVector = [0,1,0];
-  //TASK 1.1: setup camera to look at the scene from the light's perspective
-  let lookAtMatrix = mat4.lookAt(mat4.create(), worldLightPos, worldLightLookAtPos, upVector);
-
-  let houselookAtMatrix = mat4.lookAt(mat4.create(), houseLightPos, houseLightLookAtPos, upVector);
-
-  context.viewMatrix = lookAtMatrix;
-
-  //multiply and save light projection and view matrix for later use in shadow mapping shader!
-  shadowNode.lightViewProjectionMatrix = mat4.multiply(mat4.create(),context.projectionMatrix, context.viewMatrix);
-
-  rootnofloor.render(context);
-  //disable framebuffer (render to screen again)
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-}
-
 function render(timeInMilliseconds) {
 
   checkForWindowResize(gl);
+
+  //setup viewport
+  gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+  gl.clearColor(0.435, 0.506, 0.635, 1.0); // sky blue color as background
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  //setup context and camera matrices
+  var context = createSGContext(gl);
+  mat4.perspective(context.projectionMatrix, glm.deg2rad(30), width / height, 0.01, 100);
+  mat4.lookAt(context.viewMatrix, camera.position, camera.look, camera.up);
+  context.invViewMatrix = mat4.invert(mat4.create(), context.viewMatrix);
 
   //update animations
   spirits.moveSpirits(timeInMilliseconds);
@@ -484,71 +365,21 @@ function render(timeInMilliseconds) {
   }
   lampAngle += 50*lampSwingSpeed;
   mat4.rotateX(lampStringNode.matrix, lampStringNode.matrix, lampSwingSpeed);
-  lampNode.matrix = glm.translate(Math.sin(lampAngle*0.03 + 0.70) + 7.4, 2.9, 9);
-  noface.alpha = camera.alpha;
+  lampNode.position[0] = Math.sin(lampAngle*0.03 + 0.70) + 7.4;
+  lampNode.matrix = glm.translate(lampNode.position[0], lampNode.position[1], lampNode.position[2]);
+
+  // update alpha for the noface
   mask.alpha = camera.alpha;
+  noface.alpha = camera.alpha;
 
-  //draw scene for shadow map into texture
-  renderToTexture(timeInMilliseconds);
-
-  //setup viewport
-  gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-  gl.clearColor(0.435, 0.506, 0.635, 1.0); // sky blue color as background
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-  //setup context and camera matrices
-  const context = createSGContext(gl);
+  // update camera movement
   camera.move(timeInMilliseconds);
 
-  mat4.perspective(context.projectionMatrix, glm.deg2rad(30), width / height, 0.01, 100);
-  mat4.lookAt(context.viewMatrix, camera.position, camera.look, camera.up);
-  context.invViewMatrix = mat4.invert(mat4.create(), context.viewMatrix);
-
-  //render scenegraph
   root.render(context);
 
   //animate
   requestAnimationFrame(render);
 }
-
-
-//a scene graph node for setting shadow parameters
-class ShadowSGNode extends SGNode {
-  constructor(shadowtexture, textureunit, width, height, children) {
-    super(children);
-    this.shadowtexture = shadowtexture;
-    this.textureunit = textureunit;
-    this.texturewidth = width;
-    this.textureheight = height;
-
-    this.lightViewProjectionMatrix = mat4.create(); //has to be updated each frame
-  }
-
-  render(context) {
-    //set additional shader parameters
-    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_depthMap'), this.textureunit);
-
-    //pass shadow map size to shader (required for extra task)
-    gl.uniform1f(gl.getUniformLocation(context.shader, 'u_shadowMapWidth'), this.texturewidth);
-    gl.uniform1f(gl.getUniformLocation(context.shader, 'u_shadowMapHeight'), this.textureheight);
-
-    var eyeToLightMatrix = mat4.multiply(mat4.create(), this.lightViewProjectionMatrix, context.invViewMatrix);
-    //var eyeToLightMatrix = mat4.create();
-    gl.uniformMatrix4fv(gl.getUniformLocation(context.shader, 'u_eyeToLightMatrix'), false, eyeToLightMatrix);
-
-    //activate and bind texture
-    gl.activeTexture(gl.TEXTURE0 + this.textureunit);
-    gl.bindTexture(gl.TEXTURE_2D, this.shadowtexture);
-
-    //render children
-    super.render(context);
-
-    //clean up
-    gl.activeTexture(gl.TEXTURE0 + this.textureunit);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-  }
-}
-
 
 //a scene graph node for setting texture parameters
 class TextureSGNode extends SGNode {
@@ -562,6 +393,7 @@ class TextureSGNode extends SGNode {
     this.textureunit3 = textureunit3;
   }
 
+// we have to enable the secondary textures, activate, bind and set their uniforms
   render(context) {
     if (this.texture1 !== undefined){
       gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableObjectTexture1'), 1);
@@ -605,7 +437,7 @@ class TextureSGNode extends SGNode {
   }
 }
 
-// https://stackoverflow.com/questions/29802400/cylinder-partially-visible-webgl
+// create cylinder using math (please see documentation for explanation)
 function createCylinder(segments, length, radius) {
   var textureCoordData = [];
   var vertices = [];
@@ -684,6 +516,7 @@ function createCylinder(segments, length, radius) {
 
 }
 
+//
 class WindowSGNode extends SGNode{
 
   constructor(windowWidth, windowHeight, frameThickness, children) {
@@ -866,10 +699,15 @@ class WindowSGNode extends SGNode{
   }
 }
 
-class TransparentMaterialSGNode extends MaterialSGNode {
+// This object sets an alpha uniform to the material so that it can be made transparent
+class TransparentMaterialSGNode extends MaterialSGNode{
 
   constructor(children) {
     super(children);
+    this.ambient = [0, 0, 0, 1];
+    this.diffuse = [0.1, 0.1, 0.1, 1];
+    this.specular = [0.1, 0.1, 0.1, 1];
+    this.shininess = 10;
     this.alpha = 1;
   }
 
@@ -889,6 +727,7 @@ class TransparentMaterialSGNode extends MaterialSGNode {
   }
 }
 
+// Rain Node to spawn raindrops (See documentation for explanation)
 class RainSGNode extends SGNode {
 
   constructor(particleCount, area, children) {
@@ -952,10 +791,6 @@ class SpiritsSGNode extends SGNode {
 
       // add Body node as a sphere by creating a Sphere
       let spiritBodyNode = new TransparentMaterialSGNode([new RenderSGNode(makeSphere(0.2, 10, 10))]);
-      spiritBodyNode.ambient = [0, 0, 0, 1];
-      spiritBodyNode.diffuse = [0, 0, 0, 1];
-      spiritBodyNode.specular = [0.5, 0.5, 0.5, 1];
-      spiritBodyNode.shininess = 100;
       spirit.append(spiritBodyNode);
 
       //left leg
@@ -977,6 +812,7 @@ class SpiritsSGNode extends SGNode {
     return new TransformationSGNode(glm.transform({translate: [x, y, z], rotateX: 90, scale: [0.06, 0.1, length]}), [limb]);
   }
 
+// Generate random movement
   moveSpirits(timeInMilliseconds){
     for (var i = 0; i < this.spirits.length; i++){
       this.spirits[i].children[0].matrix = glm.rotateZ(Math.cos(timeInMilliseconds / 2 * 0.01) * 25);
@@ -1009,43 +845,46 @@ function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
 }
 
-class SpiritlightSGNode extends LightSGNode {
+class DirectionalLight extends LightSGNode{
 
-  constructor(position, direction, angle, children) {
-    super(position, children);
-    this.direction = direction || [0, 0, 0];
-    this.angle = 90;
+    constructor(position, children) {
+      super(position, children);
+      this.direction = [0.5, 3, 1.0];
 
-    this._worldDirection = null;
-  }
-
-  setLightDirection(context) {
-    const gl = context.gl;
-    if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Dir'))) {
-      return;
-    }
-    const direction = this._worldDirection || this.direction;
-    gl.uniform3f(gl.getUniformLocation(context.shader, this.uniform+'Dir'), direction[0], direction[1], direction[2]);
-    if(!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Angle'))) {
-      return;
+      this.uniform = 'u_directionalLight';
     }
 
-    gl.uniform1f(gl.getUniformLocation(context.shader, this.uniform+'Angle'), glm.deg2rad(this.angle));
-  }
+    render(context) {
+      gl.uniform3fv(gl.getUniformLocation(context.shader, this.uniform+'.direction'), this.direction);
+      super.render(context);
+    }
+}
 
-  computeLightDirection(context) {
-    const modelViewMatrix = mat4.multiply(mat4.create(), context.viewMatrix, context.sceneMatrix);
-    const odir = this.direction;
-    const direction = vec4.transformMat4(vec4.create(), vec4.fromValues(odir[0], odir[1], odir[2], 1), modelViewMatrix);
+class PointLight extends DirectionalLight{
 
-    this._worldDirection = direction;
-  }
+    constructor(position, children) {
+      super(position, children);
+      this.uniform = 'u_pointLight';
+    }
 
-  render(context) {
-    this.setLightDirection(context);
-    this.computeLightDirection(context);
+    render(context) {
+      super.render(context);
+    }
+}
 
-    //render children
-    super.render(context);
-  }
+class SpotLight extends PointLight{
+
+    constructor(position, children) {
+      super(position, children);
+      this.constant = 1;
+      this.direction = [0.5, -10, 0.5];
+      this.cutoff = Math.cos(15 * Math.PI);
+      this.uniform = 'u_spotLight';
+    }
+
+    render(context) {
+      gl.uniform1f(gl.getUniformLocation(context.shader, this.uniform+'.constant'), this.constant);
+      gl.uniform1f(gl.getUniformLocation(context.shader, this.uniform+'.outerCutOff'), this.cutOff);
+      super.render(context);
+    }
 }
